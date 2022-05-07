@@ -15,11 +15,11 @@
 /**
  * @brief fonction config_addr, configuration adresse de la socket et la remplit avec le port et l'adresse du serveur.
  * 
- * @param sockaddr_in* addr : adresse de la socket
+ * @param addr : adresse de la socket
  * 
- * @return int : 0 si succès, -1 sinon
+ * @return 0 si succès, -1 sinon
  */
-int config_addr(struct sockaddr_in *addr)
+int8_t config_addr(struct sockaddr_in *addr)
 {
     addr->sin_family = PF_INET;
     addr->sin_port = htons(2000);
@@ -30,38 +30,57 @@ int config_addr(struct sockaddr_in *addr)
 /**
  * @brief fonction stockage_client, stockage du client dans la structure Client.
  * 
- * @param Client* client : structure client
- * @param unsigned int longueurDeAdresseDuClient : longueur de l'adresse du client
+ * @param client : structure client
+ * @param longueurDeAdresseDuClient : longueur de l'adresse du client
  */
 void stockage_client(Client *client, int descripteurDeSocketServeur)
 {
     /* On obtient le nombre d'éléments dans le tableau. */
-    uint8_t taille;
+    uint8_t taille = 1;
+    uint8_t indexClient;
 
     /* Boucle infinie qui accepte un client et l'ajoute au tableau client. */
     while (1)
     {
-        taille = sizeof(client) / sizeof(Client) - 1;
+        indexClient = taille - 1;
         /* Accepte un client et l'ajoute au tableau client. */
-        client[taille].descripteurDeSocketClient = accept(
+        client[indexClient].descripteurDeSocketClient = accept(
             descripteurDeSocketServeur,
-            (struct sockaddr *)&(client[taille].adresseDuClient),
-            &(client[taille].longueurDeAdresseDuClient)
+            (struct sockaddr *)&(client[indexClient].adresseDuClient),
+            &(client[indexClient].longueurDeAdresseDuClient)
         );
+        taille++;
 
         /* Vérifie si le client est connecté. */
-        if (client[taille].descripteurDeSocketClient < 0)
+        if (client[indexClient].descripteurDeSocketClient < 0)
         {
             perror("Erreur de connexion.\n");
             free(client);
             client = NULL;
             return;
         }
-        else
+        else if (taille < 4)
         {
             printf("Client connecté.\n");
-            
+
+            /* On prévient le client qu'il est bien connecté et réalloue la mémoire pour laisser
+            place à un nouveau client. */
+            send (client[indexClient].descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
             client = (Client*) realloc(client, sizeof(client) + sizeof(Client));
+            if (!client)
+            {
+                perror("Erreur d'allocation de mémoire.\n");
+                free(client);
+                client = NULL;
+                return;
+            }
+        }
+        else
+        {
+            printf ("Le nombre de clients maximum est atteint.\n");
+            send (client[indexClient].descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
+            close (client[indexClient].descripteurDeSocketClient);
+            taille--;
         }
     }
 }
@@ -75,22 +94,49 @@ void stockage_client(Client *client, int descripteurDeSocketServeur)
  * 
  * @return int : 0 si succès, -1 sinon
  */
-int reception_client(Client *client, uint8_t taille, char* buffer)
+int8_t reception_client(Client *client, uint8_t* taille, char** buffer)
 {
+    /* Initialisation de l'index du tableau de buffer à 0. */
     uint8_t i = 0;
+    /* Variable utilisée pour stocker le nombre d'octets lus. */
+    int nb_octets_lus;
+
     /* Boucle infinie qui reçoit le message du client. */
     while (1)
     {
+        nb_octets_lus = 0;
         if (i != taille)
         {
             /* Reçoit le message du client. */
-            recv(
+            if (recv(
                 client[i].descripteurDeSocketClient,
-                buffer[LONGUEUR_BUFFER * i],
+                buffer[i],
                 LONGUEUR_BUFFER,
                 0
-            );
+            ))
+            {
+                /* Vérifie si le message n'est pas vide. */
+                if (buffer[i][0] != '\0')
+                {
+                    printf("\nLecture de la requete : \n");
+                    /* On lit le message du client. */
+                    do
+                    {
+                        nb_octets_lus = recv(
+                            client[i].descripteurDeSocketClient,
+                            buffer[i],
+                            LONGUEUR_BUFFER,
+                            0
+                        );
+                    }
+                    while (nb_octets_lus < LONGUEUR_BUFFER);
+                    printf("%s\n", buffer[i]);
+                    printf("Lecture de la requete terminée.\n\n");
+                    send(client[i].descripteurDeSocketClient, "Requete lue.\n", 20, 0);
+                }
+
             i++;
+            }
         }
         else /*--->*/ i = 0;
     }

@@ -61,9 +61,24 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    Client* client      = malloc (sizeof(Client)); // client qui va être créé à chaque fois qu'un client se connecte
-    uint8_t indexClient = sizeof (client) / sizeof(Client) - 1; // taille du tableau client
-    char* buffer        = malloc (LONGUEUR_BUFFER); // buffer qui va être utilisé pour lire les données du client
+    Client* client = malloc (sizeof(Client)); // client qui va être créé à chaque fois qu'un client se connecte
+    if (!client)
+    {
+        perror("Erreur d'allocation de mémoire du t.\n");
+        return -1;
+    }
+    uint8_t taille      = 1;
+    uint8_t indexClient = 0; // taille du tableau client
+    char** tabBuffer = malloc (indexClient); // tableau de buffer qui va être utilisé pour stocker les buffers des clients
+    if (!tabBuffer)
+    {
+        perror("Erreur d'allocation de mémoire.\n");
+        return -1;
+    }
+    memset(tabBuffer[0], 0, LONGUEUR_BUFFER); // on initialise le tableau de buffer à 0
+
+    
+    
 
     pthread_t thread_connexion; // thread qui va gérer la connexion des clients
     pthread_t thread_reception; // thread qui va gérer la réception des données des clients
@@ -75,37 +90,31 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    /* Etape 5 */
-    /***********/
-    while (1)
+    if (client[0].descripteurDeSocketClient != 0)
     {
-        indexClient = sizeof(client) / sizeof(Client) - 1;
-        if (pthread_create(&thread_reception, NULL, reception_client, (client, indexClient + 1, buffer)) != 0)
+        if (pthread_create(&thread_reception, NULL, reception_client, (client, taille, tabBuffer)) != 0)
         {
             printf("Problèmes pour créer le thread de réception.\n");
             return -1;
         }
-        char* buffer = realloc(buffer, LONGUEUR_BUFFER * indexClient);
-        for (uint8_t i = 0; i < indexClient; i++)
-        {
-            if (client[i].descripteurDeSocketClient != 0)
-            {
-                
-            }
-            /* Etape 6 */
-            /***********/
-            unsigned int nbCaracteres;
-            unsigned int i;
-            char buffer[1024];
-            memset(buffer, 0, 1024);
-            printf("\nLecture de la requete : \n");
-            do
-            {
-                nbCaracteres = recv(client[i].descripteurDeSocketClient, buffer, 1024, 0);
-                for (i = 0; i < nbCaracteres; i++)
-                    printf("%c", buffer[i]);
-            } while (nbCaracteres == 1024);
+    }
 
+    /* Etape 5 */
+    /***********/
+    while (1)
+    {
+        taille      = sizeof(client) / sizeof(Client);
+        indexClient = taille - 1;
+        
+        
+        tabBuffer = realloc(tabBuffer, taille);
+        if (!tabBuffer)
+        {
+            printf("Problèmes de reallocation du buffer.\n");
+            return -1;
+        }
+        for (uint8_t i = 0; i < taille; i++)
+        {
             /* Etape 7 */
             /***********/
             char* reponse = NULL;
@@ -119,13 +128,21 @@ int main(int argc, char **argv)
         /* Etape 8 */
         /***********/
     }
+    /* On termine le thread appelant. */
     pthread_exit(NULL);
-    close(descripteurDeSocketServeur);
+
+    /* Il ferme le socket de chaque client et le socket du serveur. */
     for (uint8_t i = 0; i < sizeof(client) / sizeof(Client); i++)
     {
         close(client[i].descripteurDeSocketClient);
     }
+    close(descripteurDeSocketServeur);
+
+    /* Il libère la mémoire allouée au client et au tampon. */
     free (client);
+    free (tabBuffer);
+    client    = NULL;
+    tabBuffer = NULL;
 
     return 0;
 }
