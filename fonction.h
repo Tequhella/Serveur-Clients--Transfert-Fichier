@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <pthread.h>
-
+#include <syslog.h>
 
 // -lpthread
 // -D_REENTRANT
