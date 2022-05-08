@@ -67,8 +67,9 @@ int main(int argc, char **argv)
         perror("Erreur d'allocation de mémoire du t.\n");
         return -1;
     }
-    uint8_t taille      = 1;
-    uint8_t indexClient = 0; // taille du tableau client
+    uint8_t taille      = 1; // taille du tableau client
+    uint8_t indexClient = 0; // index du client
+    uint8_t sortie      = 1; // sortie du programme
     char** tabBuffer = malloc (indexClient); // tableau de buffer qui va être utilisé pour stocker les buffers des clients
     if (!tabBuffer)
     {
@@ -76,9 +77,6 @@ int main(int argc, char **argv)
         return -1;
     }
     memset(tabBuffer[0], 0, LONGUEUR_BUFFER); // on initialise le tableau de buffer à 0
-
-    
-    
 
     pthread_t thread_connexion; // thread qui va gérer la connexion des clients
     pthread_t thread_reception; // thread qui va gérer la réception des données des clients
@@ -101,7 +99,7 @@ int main(int argc, char **argv)
 
     /* Etape 5 */
     /***********/
-    while (1)
+    while (sortie == 1)
     {
         taille      = sizeof(client) / sizeof(Client);
         indexClient = taille - 1;
@@ -115,18 +113,15 @@ int main(int argc, char **argv)
         }
         for (uint8_t i = 0; i < taille; i++)
         {
-            /* Etape 7 */
-            /***********/
-            char* reponse = NULL;
-            /* Envoi de la réponse au client. */
-            printf("\nEcriture de la reponse : %s\n", reponse);
-            send(client[i].descripteurDeSocketClient, reponse, sizeof(reponse), 0);
+            if (str_eq(tabBuffer[i], "FIN"))
+            {
+                indexClient = i;
+                memset(tabBuffer[i], 0, LONGUEUR_BUFFER);
+                sortie--;
+            }
+            
         }
         
-
-        
-        /* Etape 8 */
-        /***********/
     }
     /* On termine le thread appelant. */
     pthread_exit(NULL);

@@ -13,6 +13,24 @@
 #include "fonction.h"
 
 /**
+ * @brief fonction str_eq, test légalité de 2 chaînes de caractères.
+ * 
+ * @param str1 La première chaîne à comparer.
+ * @param str2 La chaîne à comparer.
+ * 
+ * @return 1 si les deux chaînes sont égales, 0 sinon.
+ */
+int str_eq(const char *str1, const char *str2)
+{
+  while (*str1 == *str2 && *str1)
+  {
+    str1++;
+    str2++;
+  }
+  return *str1 == *str2;
+}
+
+/**
  * @brief fonction config_addr, configuration adresse de la socket et la remplit avec le port et l'adresse du serveur.
  * 
  * @param addr : adresse de la socket
