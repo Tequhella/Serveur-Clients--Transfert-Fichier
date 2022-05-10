@@ -36,21 +36,29 @@ typedef struct Client
 Client;
 
 /**
+ * @brief fonction str_eq, test légalité de 2 chaînes de caractères.
+ * 
+ * @param str1 La première chaîne à comparer.
+ * @param str2 La chaîne à comparer.
+ * 
+ * @return 1 si les deux chaînes sont égales, 0 sinon.
+ */
+uint8_t str_eq(const char *str1, const char *str2);
+
+/**
  * @brief fonction config_addr, configuration adresse de la socket et la remplit avec le port et l'adresse du serveur.
  * 
- * @param sockaddr_in* addr : adresse de la socket
+ * @param addr : adresse de la socket
  * 
- * @return int : 0 si succès, -1 sinon
+ * @return 0 si succès, -1 sinon
  */
-int config_addr(struct sockaddr_in *addr);
+int8_t config_addr(struct sockaddr_in *addr);
 
 /**
  * @brief fonction stockage_client, stockage du client dans la structure Client.
  * 
- * @param Client* client : structure client
- * @param int descripteurDeSocketClient : descripteur de la socket du client
- * @param struct sockaddr_in adresseDuClient : adresse du client
- * @param unsigned int longueurDeAdresseDuClient : longueur de l'adresse du client
+ * @param client : structure client
+ * @param longueurDeAdresseDuClient : longueur de l'adresse du client
  */
 void stockage_client(Client *client, int descripteurDeSocketServeur);
 
@@ -63,6 +71,6 @@ void stockage_client(Client *client, int descripteurDeSocketServeur);
  * 
  * @return int : 0 si succès, -1 sinon
  */
-int reception_client(Client *client, uint8_t taille, char* buffer);
+int8_t reception_client(Client *client, uint8_t* taille, char** buffer);
 
 #endif
