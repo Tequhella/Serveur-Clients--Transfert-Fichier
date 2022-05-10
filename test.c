@@ -21,8 +21,8 @@ int main(int argc, char const *argv[])
 
     char mot[20];
     char choixFichier[20];
-    char *ls = "ls partage > resultat.txt";
-    char *cd = "cd";     // a faire
+    char *ls = "ls partage > resultat.txt"; //fait
+    char *cd = "cd";     // fait
     char *send = "send"; // code client socket
     char *dl = "dl";     // code serveur socket
     char *exit = "exit"; // fait
