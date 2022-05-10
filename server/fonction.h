@@ -43,7 +43,7 @@ Client;
  * 
  * @return 1 si les deux chaînes sont égales, 0 sinon.
  */
-int str_eq(const char *str1, const char *str2);
+uint8_t str_eq(const char *str1, const char *str2);
 
 /**
  * @brief fonction config_addr, configuration adresse de la socket et la remplit avec le port et l'adresse du serveur.

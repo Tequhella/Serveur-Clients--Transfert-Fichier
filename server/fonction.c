@@ -20,7 +20,7 @@
  * 
  * @return 1 si les deux chaînes sont égales, 0 sinon.
  */
-int str_eq(const char *str1, const char *str2)
+uint8_t str_eq(const char *str1, const char *str2)
 {
   while (*str1 == *str2 && *str1)
   {
@@ -37,7 +37,7 @@ int str_eq(const char *str1, const char *str2)
  * 
  * @return 0 si succès, -1 sinon
  */
-int8_t config_addr(struct sockaddr_in *addr)
+int8_t config_addr(struct sockaddr_in* addr)
 {
     addr->sin_family = PF_INET;
     addr->sin_port = htons(2000);
