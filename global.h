@@ -13,11 +13,18 @@
 #define GLOBAL_H
 
 
-#define NULL (void*)0             // Definition de la constante NULL
-#define LONGUEUR_BUFFER 1024      // Taille du buffer de lecture
+#define NULL (void*)0                // Definition de la constante NULL
+#define LONGUEUR_BUFFER 1024         // Taille du buffer de lecture
 
-#define ipMachine "127.0.0.1"     // Définition de l'ip du serveur avec la valeur 127.0.0.1.
-#define PORT 2000                 // Il définit le numéro de port à 2000.
-#define requete "get fichier\n\n" // Il définit la requête à envoyer au serveur.
+#define ipMachine "127.0.0.1"        // Définition de l'ip du serveur avec la valeur 127.0.0.1.
+#define PORT 2000                    // Il définit le numéro de port à 2000.
+#define requeteConnectee "connectee" // Il définit la requête à envoyer au serveur.
+#define requeteLs       "ls partage > resultat.txt"
+#define requeteCd       "cd"
+#define requeteSend     "send"
+#define requeteDl       "dl"
+#define requeteExit     "exit"
+#define requeteHelp     "help"
+#define requeteShutdown "shutdown"
 
 #endif

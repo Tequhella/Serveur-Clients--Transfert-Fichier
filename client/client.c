@@ -27,10 +27,22 @@ int main(int argc, char **argv)
 {
     /* Déclaration de l'addresse IP, du numéro de port et du protocole */
     /******************************************************************/
-    struct sockaddr_in addresseDuClient;
-    if (config_addr(&addresseDuClient) == -1)
+    struct sockaddr_in addresseDuServeur;
+    if (config_addr(&addresseDuServeur) == -1)
     {
         perror("Erreur de configuration de l'adresse.\n");
+        return -1;
+    }
+    
+    Serveur serveur =
+    {
+        .descripteurDeSocketServeur = socket(PF_INET, SOCK_STREAM, 0),
+        .addresseDuServeur          = addresseDuServeur,
+        .longueurDeAdresseDuServeur = sizeof(addresseDuServeur)
+    };
+    if (serveur.descripteurDeSocketServeur < 0)
+    {
+        printf("Problemes pour creer la socket");
         return -1;
     }
     
@@ -38,71 +50,150 @@ int main(int argc, char **argv)
     /* Affichage des informations de connexion */
     /*******************************************/
     printf("Connexion vers la machine ");
-    unsigned char *addresseDuClientIP = (unsigned char *)&(addresseDuClient.sin_addr.s_addr);
-    printf("%d.", *(addresseDuClientIP));
-    printf("%d.", *(addresseDuClientIP + 1));
-    printf("%d.", *(addresseDuClientIP + 2));
-    printf("%d", *(addresseDuClientIP + 3));
+    unsigned char *addresseDuServeurIP = (unsigned char *)&(addresseDuServeur.sin_addr.s_addr);
+    printf("%d.", *(addresseDuServeurIP));
+    printf("%d.", *(addresseDuServeurIP + 1));
+    printf("%d.", *(addresseDuServeurIP + 2));
+    printf("%d", *(addresseDuServeurIP + 3));
     printf(" sur le port %u \n", PORT);
     
-    /* Creation de la socket */
-    /*************************/
-    int descripteurDeSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (descripteurDeSocket < 0)
-    {
-        printf("Problemes pour creer la socket");
-        return -1;
-    }
     printf("socket cree\n");
     /* Connexion de la socket au serveur */
     /*************************************/
-    if (connect(descripteurDeSocket,(struct sockaddr *)&addresseDuClient,sizeof(addresseDuClient)) < 0)
+    if (connect(serveur.descripteurDeSocketServeur,(struct sockaddr *)&addresseDuServeur,sizeof(addresseDuServeur)) < 0)
     {
         printf("Problemes pour se connecter au serveur");
         return -1;
     }
     printf("socket connectee\n");
+
     /* Envoi la requête grâce à send */
     /*********************************/
-    printf("\nEnvoi de la requete : %s \n", requete);
-    send(descripteurDeSocket, requete, sizeof(requete), 0);
+    printf("\nEnvoi de la requete : %s \n", requeteConnectee);
+    send(serveur.descripteurDeSocketServeur, requeteConnectee, sizeof(requeteConnectee), 0);
+
     /* Lecture la réponse grâce à recv */
     /***********************************/
     char buffer[LONGUEUR_BUFFER];
-    char* commande;
+    int nbOctetsRecus = 0;
     uint8_t sortie = 1;
-    unsigned int nbCaracteres;
-    unsigned int i;
+
+    reception_serveur(&serveur, buffer);
+    printf("\nReponse du serveur : %s \n", buffer);
+
+    char mot[20];
+    char choixFichier[20];
 
     while (sortie == 1)
     {
-        
+        system("clear");
+        printf("Voici les commandes que vous pouvez utiliser : \nls\n%s\n%s\n%s\n%s\n", requeteCd, requeteSend, requeteHelp, requeteExit);
+        printf("Veuillez entrer votre commande : ");
+        scanf("%s", mot);
 
-    }
-    
-
-    printf("\nReception de la reponse : \n");
-    do
-    {
-        nbCaracteres = recv(descripteurDeSocket, buffer, 1024, 0);
-        for (i = 0; i < nbCaracteres; i++)
+        if (str_eq(mot, requeteSend))
         {
-            printf("%c", buffer[i]);
-        }
-    } while (nbCaracteres == 1024);
-        char* temp = buffer;
-            if (file)
+            // On envoi la requete send pour que le serveur se mette en condition de recevoir un fichier
+            printf("Envoi de la requete : %s \n", requeteSend);
+            send(serveur.descripteurDeSocketServeur, requeteSend, sizeof(requeteSend), 0);
+            
+            // On vérifie que le serveur nous a bien envoyé une réponse
+            reception_serveur(&serveur, buffer);
+            printf("\nReponse du serveur : %s \n", buffer);
+            if (str_eq(buffer, "ok"))
             {
-                fputs (temp, file);
+                printf("Veuillez entrer le nom du fichier que vous voulez envoyer : ");
+                scanf("%s", choixFichier);
+                send(serveur.descripteurDeSocketServeur, choixFichier, sizeof(choixFichier), 0);
+                reception_serveur(&serveur, buffer);
+                printf("\nReponse du serveur : %s \n", buffer);
+                if (str_eq(buffer, "Reception reussie"))
+                {
+                    printf("Reception reussie \n");
+                }
+                else
+                {
+                    printf("Erreur de reception \n");
+                }
             }
             else
             {
-                printf ("Le fichier %s n'a pas pu être ouvert.\n", nomFichier);
+                printf("Erreur serveur : impossible de recevoir de fichier \n");
             }
-            fclose (file);
+        }
+        else if (str_eq(mot, requeteHelp))
+        {
+            printf("Voici les commandes que vous pouvez utiliser : \nls\n%s\n%s\n%s\n%s\n", requeteCd, requeteSend, requeteHelp, requeteExit);
+        }
+        else if (str_eq(mot, requeteExit))
+        {
+            printf("Envoi de la requete : %s \n", requeteShutdown);
+            send(serveur.descripteurDeSocketServeur, requeteExit, sizeof(requeteExit), 0);
+            reception_serveur(&serveur, buffer);
+            printf("\nReponse du serveur : %s \n", buffer);
+            if (str_eq(buffer, "ok"))
+            {
+                sortie = 0;
+            }
+            else
+            {
+                printf("Erreur serveur : impossible de vous deconnecter de manière normale \n");
+            }
+        }
+        else if (str_eq(mot, requeteShutdown))
+        {
+            printf("Envoi de la requete : %s \n", requeteShutdown);
+            send(serveur.descripteurDeSocketServeur, requeteShutdown, sizeof(requeteShutdown), 0);
+            reception_serveur(&serveur, buffer);
+            printf("\nReponse du serveur : %s \n", buffer);
+            if (str_eq(buffer, "ok"))
+            {
+                printf("Shutdown reussi \n");
+                sortie = 0;
+            }
+            else
+            {
+                printf("Erreur shutdown \n");
+            }
+        }
+        else if (str_eq(mot, requeteCd))
+        {
+            printf("Envoi de la requete : %s \n", requeteCd);
+            send(serveur.descripteurDeSocketServeur, requeteCd, sizeof(requeteCd), 0);
+            reception_serveur(&serveur, buffer);
+            printf("\nReponse du serveur : %s \n", buffer);
+            if (str_eq(buffer, "ok"))
+            {
+                printf("Veuillez entrer le nom du dossier que vous voulez acceder : ");
+                scanf("%s", choixFichier);
+                send(serveur.descripteurDeSocketServeur, choixFichier, sizeof(choixFichier), 0);
+                reception_serveur(&serveur, buffer);
+                printf("\nReponse du serveur : %s \n", buffer);
+                if (str_eq(buffer, "ok"))
+                {
+                    printf("Accès au dossier reussi \n");
+                }
+                else
+                {
+                    printf("Erreur accès au dossier \n");
+                }
+            }
+            else
+            {
+                printf("Erreur serveur : impossible de changer de dossier \n");
+            }
+        }
+        else
+        {
+            printf("Commande inconnue \n");
+        }
+    }
+    
     printf("\n\nFIN\n\n");
+
     /* Fermeture de la connexion */
     /*****************************/
-    close(descripteurDeSocket);
+    close(serveur.descripteurDeSocketServeur);
+    
     return 0;
 }

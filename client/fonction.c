@@ -22,12 +22,12 @@
  */
 uint8_t str_eq(const char *str1, const char *str2)
 {
-  while (*str1 == *str2 && *str1)
-  {
-    str1++;
-    str2++;
-  }
-  return *str1 == *str2;
+    while (*str1 == *str2 && *str1)
+    {
+        str1++;
+        str2++;
+    }
+    return *str1 == *str2;
 }
 
 /**
@@ -43,4 +43,23 @@ int8_t config_addr(struct sockaddr_in* addr)
     addr->sin_port = htons(2000);
     addr->sin_addr.s_addr = inet_addr(ipMachine);
     return 0;
+}
+
+/**
+ * @brief fonction reception_serveur, reception du message du serveur.
+ * 
+ * @param serveur : structure serveur
+ * @param buffer : buffer de reception
+ * 
+ * @return buffer de reception
+ */
+void reception_serveur(Serveur* serveur, char* buffer)
+{
+    int nbOctetsRecus = 0;
+    do
+    {
+        nbOctetsRecus = recv(serveur->descripteurDeSocketServeur, buffer, LONGUEUR_BUFFER, 0);
+    }
+    while (nbOctetsRecus < LONGUEUR_BUFFER);
+    
 }
