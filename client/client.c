@@ -19,7 +19,6 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include "global.h"
 #include "fonction.h"
 
 
@@ -67,15 +66,10 @@ int main(int argc, char **argv)
     }
     printf("socket connectee\n");
 
-    /* Envoi la requête grâce à send */
-    /*********************************/
-    printf("\nEnvoi de la requete : %s \n", requeteConnectee);
-    send(serveur.descripteurDeSocketServeur, requeteConnectee, sizeof(requeteConnectee), 0);
-
     /* Lecture la réponse grâce à recv */
     /***********************************/
     char buffer[LONGUEUR_BUFFER];
-    memeset(buffer, '\0', LONGUEUR_BUFFER);
+    memset(buffer, '\0', LONGUEUR_BUFFER);
     int nbOctetsRecus = 0;
     uint8_t sortie = 1;
 

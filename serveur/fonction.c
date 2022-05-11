@@ -51,26 +51,23 @@ int8_t config_addr(struct sockaddr_in* addr)
  * @param client : structure client
  * @param longueurDeAdresseDuClient : longueur de l'adresse du client
  */
-void stockage_client(Client *client, int descripteurDeSocketServeur)
+void stockage_client(Client* client, int descripteurDeSocketServeur)
 {
     /* On obtient le nombre d'éléments dans le tableau. */
     uint8_t taille = 1;
     uint8_t indexClient;
 
-    /* Boucle infinie qui accepte un client et l'ajoute au tableau client. */
-    while (1)
-    {
-        indexClient = taille - 1;
+    indexClient = taille - 1;
         /* Accepte un client et l'ajoute au tableau client. */
-        client[indexClient].descripteurDeSocketClient = accept(
+        client->descripteurDeSocketClient = accept(
             descripteurDeSocketServeur,
-            (struct sockaddr *)&(client[indexClient].adresseDuClient),
-            &(client[indexClient].longueurDeAdresseDuClient)
+            (struct sockaddr *)&(client->adresseDuClient),
+            &(client->longueurDeAdresseDuClient)
         );
         taille++;
 
         /* Vérifie si le client est connecté. */
-        if (client[indexClient].descripteurDeSocketClient < 0)
+        if (client->descripteurDeSocketClient < 0)
         {
             perror("Erreur de connexion.\n");
             free(client);
@@ -83,7 +80,9 @@ void stockage_client(Client *client, int descripteurDeSocketServeur)
 
             /* On prévient le client qu'il est bien connecté et réalloue la mémoire pour laisser
             place à un nouveau client. */
-            send (client[indexClient].descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
+            printf ("Envoi de la réponse au client.");
+            send (client->descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
+            /*
             client = (Client*) realloc(client, sizeof(client) + sizeof(Client));
             if (!client)
             {
@@ -92,15 +91,15 @@ void stockage_client(Client *client, int descripteurDeSocketServeur)
                 client = NULL;
                 return;
             }
+            */
         }
         else
         {
             printf ("Le nombre de clients maximum est atteint.\n");
-            send (client[indexClient].descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
-            close (client[indexClient].descripteurDeSocketClient);
+            send (client->descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
+            close (client->descripteurDeSocketClient);
             taille--;
         }
-    }
 }
 
 /**
@@ -112,10 +111,8 @@ void stockage_client(Client *client, int descripteurDeSocketServeur)
  * 
  * @return int : 0 si succès, -1 sinon
  */
-int8_t reception_client(Client *client, uint8_t* taille, char** buffer)
+int8_t reception_client(Client *client, uint8_t* taille, char* buffer)
 {
-    /* Initialisation de l'index du tableau de buffer à 0. */
-    uint8_t i = 0;
     /* Variable utilisée pour stocker le nombre d'octets lus. */
     int nb_octets_lus;
 
@@ -123,40 +120,33 @@ int8_t reception_client(Client *client, uint8_t* taille, char** buffer)
     while (1)
     {
         nb_octets_lus = 0;
-        if (i != taille)
+        if (recv(
+            client->descripteurDeSocketClient,
+            buffer,
+            LONGUEUR_BUFFER,
+            0
+        ))
         {
-            /* Reçoit le message du client. */
-            if (recv(
-                client[i].descripteurDeSocketClient,
-                buffer[i],
-                LONGUEUR_BUFFER,
-                0
-            ))
+            /* Vérifie si le message n'est pas vide. */
+            if (buffer[0] != '\0')
             {
-                /* Vérifie si le message n'est pas vide. */
-                if (buffer[i][0] != '\0')
+                printf("\nLecture de la requete : \n");
+                /* On lit le message du client. */
+                do
                 {
-                    printf("\nLecture de la requete : \n");
-                    /* On lit le message du client. */
-                    do
-                    {
-                        nb_octets_lus = recv(
-                            client[i].descripteurDeSocketClient,
-                            buffer[i],
-                            LONGUEUR_BUFFER,
-                            0
-                        );
-                    }
-                    while (nb_octets_lus < LONGUEUR_BUFFER);
-                    printf("%s\n", buffer[i]);
-                    printf("Lecture de la requete terminée.\n\n");
-                    send(client[i].descripteurDeSocketClient, "Requete lue.", 20, 0);
+                    nb_octets_lus = recv(
+                        client->descripteurDeSocketClient,
+                        buffer,
+                        LONGUEUR_BUFFER,
+                        0
+                    );
                 }
-
-            i++;
+                while (nb_octets_lus < LONGUEUR_BUFFER);
+                printf("%s\n", buffer);
+                printf("Lecture de la requete terminée.\n\n");
+                send(client->descripteurDeSocketClient, "Requete lue.", 20, 0);
             }
         }
-        else /*--->*/ i = 0;
     }
 }
 
@@ -179,7 +169,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         if (fichier)
         {
             fgets(buffer, LONGUEUR_BUFFER, fichier);
-            send(client[indexClient].descripteurDeSocketClient, buffer, LONGUEUR_BUFFER, 0);
+            send(client->descripteurDeSocketClient, buffer, LONGUEUR_BUFFER, 0);
             fclose(fichier);
         }
         else
@@ -195,7 +185,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         do
         {
             nb_octets_lus = recv(
-                client[indexClient].descripteurDeSocketClient,
+                client->descripteurDeSocketClient,
                 buffer,
                 LONGUEUR_BUFFER,
                 0
@@ -210,17 +200,17 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         printf("Vous avez choisis le dossier : %s \n", buffer);
         chdir(cdDossier);
         free (cdDossier);
-        send(client[indexClient].descripteurDeSocketClient, "Repertoire changé.", 20, 0);
+        send(client->descripteurDeSocketClient, "Repertoire changé.", 20, 0);
     }
     else if (str_eq(choix, requeteDl))
     {
         char buffer[LONGUEUR_BUFFER];
         int nb_octets_lus = 0;
-        send(client[indexClient].descripteurDeSocketClient, "Téléchargement en cours.", 20, 0);
+        send(client->descripteurDeSocketClient, "Téléchargement en cours.", 20, 0);
         do
         {
             nb_octets_lus = recv(
-                client[indexClient].descripteurDeSocketClient,
+                client->descripteurDeSocketClient,
                 buffer,
                 LONGUEUR_BUFFER,
                 0
@@ -234,7 +224,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         FILE* fichier = fopen(dlFichier, "r");
         if (fichier)
         {
-            send(client[indexClient].descripteurDeSocketClient, "Fichier trouvé.", 20, 0);
+            send(client->descripteurDeSocketClient, "Fichier trouvé.", 20, 0);
 
             /* On récupère le nom du fichier. */
             char nomFichier[LONGUEUR_BUFFER];
@@ -245,9 +235,9 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
             /* On ferme le fichier. */
             fclose(fichier);
             /* On envoie le nom du fichier. */
-            send(client[indexClient].descripteurDeSocketClient, nomFichier, LONGUEUR_BUFFER, 0);
+            send(client->descripteurDeSocketClient, nomFichier, LONGUEUR_BUFFER, 0);
             /* On envoie le contenu du fichier. */
-            send(client[indexClient].descripteurDeSocketClient, contenuFichier, LONGUEUR_BUFFER, 0);
+            send(client->descripteurDeSocketClient, contenuFichier, LONGUEUR_BUFFER, 0);
         }
         else
         {
@@ -258,11 +248,11 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     {
         char buffer[LONGUEUR_BUFFER];
         int nb_octets_lus = 0;
-        send(client[indexClient].descripteurDeSocketClient, "Envoie en cours.", 20, 0);
+        send(client->descripteurDeSocketClient, "Envoie en cours.", 20, 0);
         do
         {
             nb_octets_lus = recv(
-                client[indexClient].descripteurDeSocketClient,
+                client->descripteurDeSocketClient,
                 buffer,
                 LONGUEUR_BUFFER,
                 0
@@ -277,7 +267,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
             do
             {
                 nb_octets_lus = recv(
-                    client[indexClient].descripteurDeSocketClient,
+                    client->descripteurDeSocketClient,
                     buffer,
                     LONGUEUR_BUFFER,
                     0
@@ -295,7 +285,8 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     }
     else if (str_eq(choix, requeteExit))
     {
-        close(client[indexClient].descripteurDeSocketClient);
+        close(client->descripteurDeSocketClient);
+        /*
         if (indexClient == 2)
         {
             client = (Client*) realloc(client, sizeof(client) - sizeof(Client));
@@ -319,6 +310,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
                 exit(-1);
             }
         }
+        */
     }
     else if (str_eq(choix, requeteShutdown))
     {

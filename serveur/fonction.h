@@ -13,17 +13,18 @@
 #ifndef FONCTION_H
 #define FONCTION_H
 
-#define NULL (void*)0
 #define LONGUEUR_BUFFER 1024
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <pthread.h>
 #include <syslog.h>
 
-#include "global.h"
+#include "../global.h"
 
 // -lpthread
 // -D_REENTRANT
@@ -62,7 +63,7 @@ int8_t config_addr(struct sockaddr_in *addr);
  * @param client : structure client
  * @param longueurDeAdresseDuClient : longueur de l'adresse du client
  */
-void stockage_client(Client *client, int descripteurDeSocketServeur);
+void stockage_client(Client* client, int descripteurDeSocketServeur);
 
 /**
  * @brief fonction reception_client, reception du message du client.
@@ -73,7 +74,7 @@ void stockage_client(Client *client, int descripteurDeSocketServeur);
  * 
  * @return int : 0 si succès, -1 sinon
  */
-int8_t reception_client(Client *client, uint8_t* taille, char** buffer);
+int8_t reception_client(Client *client, uint8_t* taille, char* buffer);
 
 /**
  * @brief fonction tri_choix, tri du choix du client.

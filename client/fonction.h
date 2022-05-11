@@ -14,6 +14,8 @@
 #define FONCTION_H
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -21,7 +23,7 @@
 #include <pthread.h>
 #include <syslog.h>
 
-#include "global.h"
+#include "../global.h"
 
 // -lpthread
 // -D_REENTRANT

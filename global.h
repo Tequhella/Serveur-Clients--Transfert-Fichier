@@ -12,8 +12,6 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
-
-#define NULL (void*)0                // Definition de la constante NULL
 #define LONGUEUR_BUFFER 1024         // Taille du buffer de lecture
 
 #define ipMachine "127.0.0.1"        // Définition de l'ip du serveur avec la valeur 127.0.0.1.
