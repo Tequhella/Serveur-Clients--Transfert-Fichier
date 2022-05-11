@@ -15,15 +15,6 @@
 
 #define LONGUEUR_BUFFER 1024
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <pthread.h>
-#include <syslog.h>
-
 #include "../global.h"
 
 // -lpthread
@@ -37,6 +28,15 @@ typedef struct Client
     unsigned int       longueurDeAdresseDuClient;
 }
 Client;
+
+/**
+ * @brief fonction itoa, convertit un entier en une chaîne de caractères.
+ * 
+ * @param val : entier à convertir.
+ * @param base : base de la conversion.
+ * @return char* : chaîne de caractères correspondant à l'entier.
+ */
+char* itoa(int val, int base);
 
 /**
  * @brief fonction str_eq, test légalité de 2 chaînes de caractères.

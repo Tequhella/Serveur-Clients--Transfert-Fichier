@@ -13,6 +13,25 @@
 #include "fonction.h"
 
 /**
+ * @brief fonction itoa, convertit un entier en une chaîne de caractères.
+ * 
+ * @param val : entier à convertir.
+ * @param base : base de la conversion.
+ * @return char* : chaîne de caractères correspondant à l'entier.
+ */
+char* itoa(int val, int base)
+{
+	static char buf[32] = {0};
+	
+	int i = 30;
+	
+	for(; val && i ; --i, val /= base)
+	
+		buf[i] = "0123456789abcdef"[val % base];
+	
+	return &buf[i+1];
+}
+/**
  * @brief fonction str_eq, test légalité de 2 chaînes de caractères.
  * 
  * @param str1 La première chaîne à comparer.
@@ -178,46 +197,93 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     else if (str_eq(choix, requeteDl))
     {
         char buffer[LONGUEUR_BUFFER];
-        int nb_octets_lus = 0;
-        send(client->descripteurDeSocketClient, "Téléchargement en cours.", 20, 0);
         recv(
             client->descripteurDeSocketClient,
             buffer,
             LONGUEUR_BUFFER,
             0
         );
-        char *dlFichier = malloc(sizeof(buffer) + 12);
-        strcat(dlFichier, "partage/");
+        char dlFichier[LONGUEUR_BUFFER];
+        char nomFichier[LONGUEUR_BUFFER];
         strcat(dlFichier, buffer);
-
-        FILE* fichier = fopen(dlFichier, "r");
-        if (fichier)
+        printf ("Vous avez choisis le fichier : %s \n", dlFichier);
+        chdir("partage");
+        DIR* dir = opendir(buffer);
+        if (dir)
         {
-            send(client->descripteurDeSocketClient, "Fichier trouvé.", 20, 0);
+            closedir(dir);
+            chdir(buffer);
+            send(client->descripteurDeSocketClient, "Le dossier existe bien.", LONGUEUR_BUFFER, 0);
 
-            /* On récupère le nom du fichier. */
-            char nomFichier[LONGUEUR_BUFFER];
-            fgets(nomFichier, LONGUEUR_BUFFER, fichier);
-            /* On récupère le contenu du fichier. */
-            char contenuFichier[LONGUEUR_BUFFER];
-            fgets(contenuFichier, LONGUEUR_BUFFER, fichier);
-            /* On ferme le fichier. */
-            fclose(fichier);
-            /* On envoie le nom du fichier. */
-            send(client->descripteurDeSocketClient, nomFichier, LONGUEUR_BUFFER, 0);
-            /* On envoie le contenu du fichier. */
-            send(client->descripteurDeSocketClient, contenuFichier, LONGUEUR_BUFFER, 0);
+            system ("ls -C > resultat.txt");
+            FILE* fichierLs = fopen("resultat.txt", "r");
+            if (fichierLs)
+            {
+                // lecture du fichier pour obtenir le dernier chiffre présent dans le fichier
+                int dernierChiffre = 0;
+                char* version;
+                char bufferLs[LONGUEUR_BUFFER];
+                fgets(bufferLs, LONGUEUR_BUFFER, fichierLs);
+                fclose(fichierLs);
+                system("rm -f resultat.txt");
+                int i = 0;
+                while (i < LONGUEUR_BUFFER)
+                {
+                    if (bufferLs[i] == '.')
+                    {
+                        dernierChiffre++;
+                    }
+                    i++;
+                }
+                dernierChiffre--;
+                printf("Dernier chiffre : %d\n", dernierChiffre);
+                version = itoa (dernierChiffre, 10);
+
+                strcat(nomFichier, "-v");
+                strcat(nomFichier, version);
+                strcat(nomFichier, ".txt");
+
+                strcat(dlFichier, nomFichier);
+
+                printf ("Fichier à envoyer : %s\n", dlFichier);
+                
+                FILE* fichierDl = fopen(dlFichier+1, "r");
+                if (fichierDl)
+                {
+                    send(client->descripteurDeSocketClient, "Le fichier existe bien, envoi en cours...", LONGUEUR_BUFFER, 0);
+                    // on envoie le nom du fichier en 1er
+                    send(client->descripteurDeSocketClient, dlFichier+1, LONGUEUR_BUFFER, 0);
+                    // on récupère le contenu du fichier
+                    fgets(buffer, LONGUEUR_BUFFER, fichierDl);
+                    // on envoie le contenu du fichier
+                    send(client->descripteurDeSocketClient, buffer, LONGUEUR_BUFFER, 0);
+                    // on ferme le fichier
+                    fclose(fichierDl);
+                    chdir("..");
+                    chdir("..");
+                }
+                else
+                {
+                    printf("Erreur d'ouverture du fichier.\n");
+                    send(client->descripteurDeSocketClient, "Erreur d'ouverture du fichier", LONGUEUR_BUFFER, 0);
+                }
+            }
+            else
+            {
+                printf("Erreur d'ouverture du fichier.\n");
+            }
+            system("rm -f resultat.txt");
         }
         else
         {
-            printf("Erreur d'ouverture du fichier.\n");
+            send(client->descripteurDeSocketClient, "Fichier introuvable.", LONGUEUR_BUFFER, 0);
         }
     }
     else if (str_eq(choix, requeteSend))
     {
         char buffer[LONGUEUR_BUFFER];
         int nb_octets_lus = 0;
-        send(client->descripteurDeSocketClient, "Envoie en cours.", 20, 0);
+        send(client->descripteurDeSocketClient, "Récéption en cours...", 20, 0);
         recv(
             client->descripteurDeSocketClient,
             buffer,

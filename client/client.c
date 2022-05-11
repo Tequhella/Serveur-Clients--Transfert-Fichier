@@ -145,6 +145,63 @@ int main(int argc, char **argv)
                 printf("\nReponse du serveur : \n %s \n", buffer);
             }
         }
+        else if (str_eq(mot, requeteDl))
+        {
+            // On envoi la requete dl pour que le serveur nous envoie un fichier.
+            printf("Envoi de la requete : %s \n", requeteDl);
+            send(
+                serveur.descripteurDeSocketServeur,
+                requeteDl,
+                sizeof(requeteDl),
+                0
+            );
+            reception_serveur(&serveur, buffer);
+            printf("\nReponse du serveur : %s \n", buffer);
+            if (str_eq(buffer, "Requete lue."))
+            {
+                printf("Veuillez entrer le nom du fichier que vous voulez recevoir : ");
+                scanf("%s", choixFichier);
+                send(
+                    serveur.descripteurDeSocketServeur,
+                    choixFichier,
+                    sizeof(choixFichier),
+                    0
+                );
+                reception_serveur(&serveur, buffer);
+                printf("\nReponse du serveur : %s \n", buffer);
+                if (str_eq(buffer, "Le dossier existe bien."))
+                {
+                    reception_serveur(&serveur, buffer);
+                    printf("\nReponse du serveur : %s \n", buffer);
+                    if (str_eq(buffer, "Le fichier existe bien, envoi en cours..."))
+                    {
+                        // On reçoit le nom du fichier
+                        reception_serveur(&serveur, buffer);
+                        printf("\nReponse du serveur : %s \n", buffer);
+                        FILE* fichier = fopen(buffer, "w");
+                        if (fichier)
+                        {
+                            reception_serveur(&serveur, buffer);
+                            fputs(buffer, fichier);
+                            fclose(fichier);
+                            printf("Fichier recu avec succes \n");
+                        }
+                        else
+                        {
+                            printf("Erreur d'ouverture du fichier \n");
+                        }
+                    }
+                }
+                else
+                {
+                    printf("Erreur : le fichier n'existe pas \n");
+                }
+            }
+            else
+            {
+                printf("Erreur serveur : impossible de recevoir de fichier \n");
+            }
+        }
         else if (str_eq(mot, requeteHelp))
         {
             printf("Voici les commandes que vous pouvez utiliser : \nls\n%s\n%s\n%s\n%s\n", requeteCd, requeteSend, requeteHelp, requeteExit);
@@ -169,7 +226,7 @@ int main(int argc, char **argv)
                 printf("Erreur serveur : impossible de vous deconnecter de manière normale \n");
             }
         }
-        else if (str_eq(mot, requeteShutdown))
+        else if (str_eq(mot, requeteShutdown) || str_eq(mot, "sh"))
         {
             printf("Envoi de la requete : %s \n", requeteShutdown);
             send(
