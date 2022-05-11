@@ -55,16 +55,19 @@ int8_t config_addr(struct sockaddr_in* addr)
  */
 void reception_serveur(Serveur* serveur, char* buffer)
 {
+    printf("Réception du message du serveur...\n");
+    recv(
+        serveur->descripteurDeSocketServeur,
+        buffer,
+        LONGUEUR_BUFFER,
+        0
+    );
+    /*
     int nbOctetsRecus = 0;
     do
     {
-        nbOctetsRecus = recv(
-            serveur->descripteurDeSocketServeur,
-            buffer,
-            LONGUEUR_BUFFER,
-            0
-        );
+        
     }
     while (nbOctetsRecus < LONGUEUR_BUFFER);
-    
+    */
 }

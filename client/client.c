@@ -79,10 +79,11 @@ int main(int argc, char **argv)
     char mot[20];
     char choixFichier[20];
 
+    system("clear");
+    printf("Voici les commandes que vous pouvez utiliser : \nls\n%s\n%s\n%s\n%s\n%s\n", requeteCd, requeteSend, requeteHelp, requeteExit, requeteShutdown);
+
     while (sortie == 1)
     {
-        system("clear");
-        printf("Voici les commandes que vous pouvez utiliser : \nls\n%s\n%s\n%s\n%s\n", requeteCd, requeteSend, requeteHelp, requeteExit);
         printf("Veuillez entrer votre commande : ");
         scanf("%s", mot);
 
@@ -126,7 +127,7 @@ int main(int argc, char **argv)
                 printf("Erreur serveur : impossible de recevoir de fichier \n");
             }
         }
-        else if (str_eq(mot, requeteLs))
+        else if (str_eq(mot, "ls"))
         {
             // On envoi la requete ls pour que le serveur liste les fichiers.
             printf("Envoi de la requete : %s \n", requeteLs);
@@ -141,7 +142,7 @@ int main(int argc, char **argv)
             if (str_eq(buffer, "Requete lue."))
             {
                 reception_serveur(&serveur, buffer);
-                printf("\nReponse du serveur : %s \n", buffer);
+                printf("\nReponse du serveur : \n %s \n", buffer);
             }
         }
         else if (str_eq(mot, requeteHelp))

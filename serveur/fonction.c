@@ -115,39 +115,16 @@ int8_t reception_client(Client *client, uint8_t* taille, char* buffer)
 {
     /* Variable utilisée pour stocker le nombre d'octets lus. */
     int nb_octets_lus;
-
-    /* Boucle infinie qui reçoit le message du client. */
-    while (1)
-    {
-        nb_octets_lus = 0;
-        if (recv(
-            client->descripteurDeSocketClient,
-            buffer,
-            LONGUEUR_BUFFER,
-            0
-        ))
-        {
-            /* Vérifie si le message n'est pas vide. */
-            if (buffer[0] != '\0')
-            {
-                printf("\nLecture de la requete : \n");
-                /* On lit le message du client. */
-                do
-                {
-                    nb_octets_lus = recv(
-                        client->descripteurDeSocketClient,
-                        buffer,
-                        LONGUEUR_BUFFER,
-                        0
-                    );
-                }
-                while (nb_octets_lus < LONGUEUR_BUFFER);
-                printf("%s\n", buffer);
-                printf("Lecture de la requete terminée.\n\n");
-                send(client->descripteurDeSocketClient, "Requete lue.", 20, 0);
-            }
-        }
-    }
+    printf("\nLecture de la requete : \n");
+    recv(
+        client->descripteurDeSocketClient,
+        buffer,
+        LONGUEUR_BUFFER,
+        0
+    );
+    printf("%s\n", buffer);
+    printf("Lecture de la requete terminée.\n\n");
+    send(client->descripteurDeSocketClient, "Requete lue.", 20, 0);
 }
 
 /**
@@ -182,16 +159,12 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     {
         char buffer[LONGUEUR_BUFFER];
         int nb_octets_lus = 0;
-        do
-        {
-            nb_octets_lus = recv(
-                client->descripteurDeSocketClient,
-                buffer,
-                LONGUEUR_BUFFER,
-                0
-            );
-        }
-        while (nb_octets_lus < LONGUEUR_BUFFER);
+        recv(
+            client->descripteurDeSocketClient,
+            buffer,
+            LONGUEUR_BUFFER,
+            0
+        );
         
         char *cdDossier = malloc(sizeof(buffer) + 12);
         strcat(cdDossier, "partage/");
@@ -207,16 +180,12 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         char buffer[LONGUEUR_BUFFER];
         int nb_octets_lus = 0;
         send(client->descripteurDeSocketClient, "Téléchargement en cours.", 20, 0);
-        do
-        {
-            nb_octets_lus = recv(
-                client->descripteurDeSocketClient,
-                buffer,
-                LONGUEUR_BUFFER,
-                0
-            );
-        }
-        while (nb_octets_lus < LONGUEUR_BUFFER);
+        recv(
+            client->descripteurDeSocketClient,
+            buffer,
+            LONGUEUR_BUFFER,
+            0
+        );
         char *dlFichier = malloc(sizeof(buffer) + 12);
         strcat(dlFichier, "partage/");
         strcat(dlFichier, buffer);
@@ -249,31 +218,23 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         char buffer[LONGUEUR_BUFFER];
         int nb_octets_lus = 0;
         send(client->descripteurDeSocketClient, "Envoie en cours.", 20, 0);
-        do
-        {
-            nb_octets_lus = recv(
-                client->descripteurDeSocketClient,
-                buffer,
-                LONGUEUR_BUFFER,
-                0
-            );
-        }
-        while (nb_octets_lus < LONGUEUR_BUFFER);
+        recv(
+            client->descripteurDeSocketClient,
+            buffer,
+            LONGUEUR_BUFFER,
+            0
+        );
         
         char* nomDuFichier = buffer;
         FILE* fichier = fopen(nomDuFichier, "w");
         if (fichier)
         {
-            do
-            {
-                nb_octets_lus = recv(
-                    client->descripteurDeSocketClient,
-                    buffer,
-                    LONGUEUR_BUFFER,
-                    0
-                );
-            }
-            while (nb_octets_lus < LONGUEUR_BUFFER);
+            recv(
+                client->descripteurDeSocketClient,
+                buffer,
+                LONGUEUR_BUFFER,
+                0
+            );
             fputs (buffer, fichier);
         }
         else
@@ -285,8 +246,10 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     }
     else if (str_eq(choix, requeteExit))
     {
-        close(client->descripteurDeSocketClient);
+        *sortie = 0;
         /*
+        close(client->descripteurDeSocketClient);
+        
         if (indexClient == 2)
         {
             client = (Client*) realloc(client, sizeof(client) - sizeof(Client));
