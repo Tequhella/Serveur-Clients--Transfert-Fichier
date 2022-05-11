@@ -75,6 +75,7 @@ int main(int argc, char **argv)
     /* Lecture la réponse grâce à recv */
     /***********************************/
     char buffer[LONGUEUR_BUFFER];
+    memeset(buffer, '\0', LONGUEUR_BUFFER);
     int nbOctetsRecus = 0;
     uint8_t sortie = 1;
 
@@ -95,16 +96,26 @@ int main(int argc, char **argv)
         {
             // On envoi la requete send pour que le serveur se mette en condition de recevoir un fichier
             printf("Envoi de la requete : %s \n", requeteSend);
-            send(serveur.descripteurDeSocketServeur, requeteSend, sizeof(requeteSend), 0);
+            send(
+                serveur.descripteurDeSocketServeur,
+                requeteSend,
+                sizeof(requeteSend),
+                0
+            );
             
             // On vérifie que le serveur nous a bien envoyé une réponse
             reception_serveur(&serveur, buffer);
             printf("\nReponse du serveur : %s \n", buffer);
-            if (str_eq(buffer, "ok"))
+            if (str_eq(buffer, "Requete lue."))
             {
                 printf("Veuillez entrer le nom du fichier que vous voulez envoyer : ");
                 scanf("%s", choixFichier);
-                send(serveur.descripteurDeSocketServeur, choixFichier, sizeof(choixFichier), 0);
+                send(
+                    serveur.descripteurDeSocketServeur,
+                    choixFichier,
+                    sizeof(choixFichier),
+                    0
+                );
                 reception_serveur(&serveur, buffer);
                 printf("\nReponse du serveur : %s \n", buffer);
                 if (str_eq(buffer, "Reception reussie"))
@@ -121,6 +132,24 @@ int main(int argc, char **argv)
                 printf("Erreur serveur : impossible de recevoir de fichier \n");
             }
         }
+        else if (str_eq(mot, requeteLs))
+        {
+            // On envoi la requete ls pour que le serveur liste les fichiers.
+            printf("Envoi de la requete : %s \n", requeteLs);
+            send(
+                serveur.descripteurDeSocketServeur,
+                requeteLs,
+                sizeof(requeteLs),
+                0
+            );
+            reception_serveur(&serveur, buffer);
+            printf("\nReponse du serveur : %s \n", buffer);
+            if (str_eq(buffer, "Requete lue."))
+            {
+                reception_serveur(&serveur, buffer);
+                printf("\nReponse du serveur : %s \n", buffer);
+            }
+        }
         else if (str_eq(mot, requeteHelp))
         {
             printf("Voici les commandes que vous pouvez utiliser : \nls\n%s\n%s\n%s\n%s\n", requeteCd, requeteSend, requeteHelp, requeteExit);
@@ -128,10 +157,15 @@ int main(int argc, char **argv)
         else if (str_eq(mot, requeteExit))
         {
             printf("Envoi de la requete : %s \n", requeteShutdown);
-            send(serveur.descripteurDeSocketServeur, requeteExit, sizeof(requeteExit), 0);
+            send(
+                serveur.descripteurDeSocketServeur,
+                requeteExit,
+                sizeof(requeteExit),
+                0
+            );
             reception_serveur(&serveur, buffer);
             printf("\nReponse du serveur : %s \n", buffer);
-            if (str_eq(buffer, "ok"))
+            if (str_eq(buffer, "Requete lue."))
             {
                 sortie = 0;
             }
@@ -143,10 +177,15 @@ int main(int argc, char **argv)
         else if (str_eq(mot, requeteShutdown))
         {
             printf("Envoi de la requete : %s \n", requeteShutdown);
-            send(serveur.descripteurDeSocketServeur, requeteShutdown, sizeof(requeteShutdown), 0);
+            send(
+                serveur.descripteurDeSocketServeur,
+                requeteShutdown,
+                sizeof(requeteShutdown),
+                0
+            );
             reception_serveur(&serveur, buffer);
             printf("\nReponse du serveur : %s \n", buffer);
-            if (str_eq(buffer, "ok"))
+            if (str_eq(buffer, "Requete lue."))
             {
                 printf("Shutdown reussi \n");
                 sortie = 0;
@@ -159,17 +198,27 @@ int main(int argc, char **argv)
         else if (str_eq(mot, requeteCd))
         {
             printf("Envoi de la requete : %s \n", requeteCd);
-            send(serveur.descripteurDeSocketServeur, requeteCd, sizeof(requeteCd), 0);
+            send(
+                serveur.descripteurDeSocketServeur,
+                requeteCd,
+                sizeof(requeteCd),
+                0
+            );
             reception_serveur(&serveur, buffer);
             printf("\nReponse du serveur : %s \n", buffer);
-            if (str_eq(buffer, "ok"))
+            if (str_eq(buffer, "Requete lue."))
             {
                 printf("Veuillez entrer le nom du dossier que vous voulez acceder : ");
                 scanf("%s", choixFichier);
-                send(serveur.descripteurDeSocketServeur, choixFichier, sizeof(choixFichier), 0);
+                send(
+                    serveur.descripteurDeSocketServeur,
+                    choixFichier,
+                    sizeof(choixFichier),
+                    0
+                );
                 reception_serveur(&serveur, buffer);
                 printf("\nReponse du serveur : %s \n", buffer);
-                if (str_eq(buffer, "ok"))
+                if (str_eq(buffer, "Ok."))
                 {
                     printf("Accès au dossier reussi \n");
                 }

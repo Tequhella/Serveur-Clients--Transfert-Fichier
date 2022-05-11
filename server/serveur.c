@@ -80,7 +80,6 @@ int main(int argc, char **argv)
 
     pthread_t thread_connexion; // thread qui va gérer la connexion des clients
     pthread_t thread_reception; // thread qui va gérer la réception des données des clients
-    pthread_t thread_envoi; // thread qui va gérer l'envoi des données des clients
     
     if (pthread_create(&thread_connexion, NULL, stockage_client, (client, descripteurDeSocketServeur)) != 0)
     {
@@ -113,11 +112,12 @@ int main(int argc, char **argv)
         }
         for (uint8_t i = 0; i < taille; i++)
         {
-            if (str_eq(tabBuffer[i], "FIN"))
+            if (str_eq(tabBuffer[i], "shutdown"))
             {
                 indexClient = i;
                 memset(tabBuffer[i], 0, LONGUEUR_BUFFER);
                 sortie--;
+                break;
             }
             
         }

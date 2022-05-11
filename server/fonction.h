@@ -23,6 +23,8 @@
 #include <pthread.h>
 #include <syslog.h>
 
+#include "global.h"
+
 // -lpthread
 // -D_REENTRANT
 
@@ -72,5 +74,15 @@ void stockage_client(Client *client, int descripteurDeSocketServeur);
  * @return int : 0 si succès, -1 sinon
  */
 int8_t reception_client(Client *client, uint8_t* taille, char** buffer);
+
+/**
+ * @brief fonction tri_choix, tri du choix du client.
+ * 
+ * @param client : structure client
+ * @param indexClient : index du client
+ * @param choix : choix du client
+ * @param sortie : sortie du programme
+ */
+void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie);
 
 #endif

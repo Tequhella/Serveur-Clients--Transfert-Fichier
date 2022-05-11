@@ -78,6 +78,7 @@ int main(int argc, char const *argv[])
 
             printf("Vous avez choisis le dossier : %s \n", choixFichier);
             chdir(cdDossier);
+            free (cdDossier);
         }
         else if (compare_char(mot, send))
         {

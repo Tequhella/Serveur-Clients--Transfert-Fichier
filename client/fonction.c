@@ -58,7 +58,12 @@ void reception_serveur(Serveur* serveur, char* buffer)
     int nbOctetsRecus = 0;
     do
     {
-        nbOctetsRecus = recv(serveur->descripteurDeSocketServeur, buffer, LONGUEUR_BUFFER, 0);
+        nbOctetsRecus = recv(
+            serveur->descripteurDeSocketServeur,
+            buffer,
+            LONGUEUR_BUFFER,
+            0
+        );
     }
     while (nbOctetsRecus < LONGUEUR_BUFFER);
     
