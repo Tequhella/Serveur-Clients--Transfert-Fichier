@@ -24,6 +24,9 @@
  */
 int main(int argc, char **argv)
 {
+    openlog("serveur", LOG_PID | LOG_CONS, LOG_LOCAL0);
+
+
     /* Etape 1 */
     /***********/
     
@@ -41,30 +44,36 @@ int main(int argc, char **argv)
     int descripteurDeSocketServeur = socket(PF_INET, SOCK_STREAM, 0);
     if (descripteurDeSocketServeur < 0)
     {
-        printf("Problemes pour créer la socket.\n");
+        perror("Problemes pour créer la socket.\n");
+        syslog(LOG_ERR, "Problemes pour créer la socket.\n");
         return -1;
     }
     printf("Socket créé.\n");
+    syslog(LOG_INFO, "Socket créé.\n");
     /* Etape 3 */
     /***********/
     if (bind(descripteurDeSocketServeur,(struct sockaddr *)&addr,sizeof(struct sockaddr_in)) < 0)
     {
-        printf("Problemes pour faire le bind.\n");
+        perror("Problemes pour faire le bind.\n");
+        syslog(LOG_ERR, "Problemes pour faire le bind.\n");
         return -1;
     }
     printf("Socket liée\n");
+    syslog(LOG_INFO, "Socket liée\n");
     /* Etape 4 */
     /***********/
     if (listen(descripteurDeSocketServeur, 1) < 0)
     {
-        printf("Problemes pour faire l'écoute.\n");
+        perror("Problemes pour faire l'écoute.\n");
+        syslog(LOG_ERR, "Problemes pour faire l'écoute.\n");
         return -1;
     }
 
     Client* client = malloc (sizeof(Client)); // client qui va être créé à chaque fois qu'un client se connecte
     if (!client)
     {
-        perror("Erreur d'allocation de mémoire du t.\n");
+        perror("Erreur d'allocation de mémoire du client.\n");
+        syslog(LOG_ERR, "Erreur d'allocation de mémoire du client.\n");
         return -1;
     }
     uint8_t taille      = 1; // taille du tableau client
@@ -93,6 +102,7 @@ int main(int argc, char **argv)
     /* Il ferme le socket de chaque client et le socket du serveur. */
     close(client->descripteurDeSocketClient);
     close(descripteurDeSocketServeur);
+    closelog();
 
     /* Il libère la mémoire allouée au client et au tampon. */
     free (client);

@@ -105,22 +105,33 @@ int main(int argc, char **argv)
             {
                 printf("Veuillez entrer le nom du fichier que vous voulez envoyer : ");
                 scanf("%s", choixFichier);
+                /* On envoie le nom du fichier au serveur. */
                 send(
                     serveur.descripteurDeSocketServeur,
                     choixFichier,
                     sizeof(choixFichier),
                     0
                 );
-                reception_serveur(&serveur, buffer);
-                printf("\nReponse du serveur : %s \n", buffer);
-                if (str_eq(buffer, "Reception reussie"))
+                strcat(choixFichier, ".txt");
+                FILE* fichier = fopen(choixFichier, "r");
+                if (fichier)
                 {
-                    printf("Reception reussie \n");
+                    /* On envoie le contenu au serveur. */
+                    fgets(buffer, LONGUEUR_BUFFER, fichier);
+                    send(
+                        serveur.descripteurDeSocketServeur,
+                        buffer,
+                        LONGUEUR_BUFFER,
+                        0
+                    );
+                    fclose(fichier);
                 }
                 else
                 {
-                    printf("Erreur de reception \n");
+                    printf("Le fichier n'existe pas.\n");
                 }
+                reception_serveur(&serveur, buffer);
+                printf("\nReponse du serveur : %s \n", buffer);
             }
             else
             {

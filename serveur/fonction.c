@@ -12,6 +12,7 @@
 
 #include "fonction.h"
 
+
 /**
  * @brief fonction itoa, convertit un entier en une chaîne de caractères.
  * 
@@ -89,6 +90,7 @@ void stockage_client(Client* client, int descripteurDeSocketServeur)
         if (client->descripteurDeSocketClient < 0)
         {
             perror("Erreur de connexion.\n");
+            syslog(LOG_ERR, "Erreur de connexion.\n");
             free(client);
             client = NULL;
             return;
@@ -96,10 +98,12 @@ void stockage_client(Client* client, int descripteurDeSocketServeur)
         else if (taille < 4)
         {
             printf("Client connecté.\n");
+            syslog(LOG_INFO, "Client connecté.\n");
 
             /* On prévient le client qu'il est bien connecté et réalloue la mémoire pour laisser
             place à un nouveau client. */
             printf ("Envoi de la réponse au client.");
+            syslog(LOG_INFO, "Envoi de la réponse au client.");
             send (client->descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
             /*
             client = (Client*) realloc(client, sizeof(client) + sizeof(Client));
@@ -115,6 +119,7 @@ void stockage_client(Client* client, int descripteurDeSocketServeur)
         else
         {
             printf ("Le nombre de clients maximum est atteint.\n");
+            syslog(LOG_INFO, "Le nombre de clients maximum est atteint.\n");
             send (client->descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
             close (client->descripteurDeSocketClient);
             taille--;
@@ -135,6 +140,7 @@ int8_t reception_client(Client *client, uint8_t* taille, char* buffer)
     /* Variable utilisée pour stocker le nombre d'octets lus. */
     int nb_octets_lus;
     printf("\nLecture de la requete : \n");
+    syslog(LOG_INFO, "Lecture de la requete : \n");
     recv(
         client->descripteurDeSocketClient,
         buffer,
@@ -142,7 +148,9 @@ int8_t reception_client(Client *client, uint8_t* taille, char* buffer)
         0
     );
     printf("%s\n", buffer);
+    syslog(LOG_INFO, "%s\n", buffer);
     printf("Lecture de la requete terminée.\n\n");
+    syslog(LOG_INFO, "Lecture de la requete terminée.\n\n");
     send(client->descripteurDeSocketClient, "Requete lue.", 20, 0);
 }
 
@@ -165,12 +173,18 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         if (fichier)
         {
             fgets(buffer, LONGUEUR_BUFFER, fichier);
-            send(client->descripteurDeSocketClient, buffer, LONGUEUR_BUFFER, 0);
+            send(
+                client->descripteurDeSocketClient,
+                buffer,
+                LONGUEUR_BUFFER,
+                0
+            );
             fclose(fichier);
         }
         else
         {
             printf("Erreur d'ouverture du fichier.\n");
+            syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
         }
         system("rm -f resultat.txt");
     }
@@ -190,9 +204,15 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         strcat(cdDossier, buffer);
 
         printf("Vous avez choisis le dossier : %s \n", buffer);
+        syslog(LOG_INFO, "Vous avez choisis le dossier : %s \n", buffer);
         chdir(cdDossier);
         free (cdDossier);
-        send(client->descripteurDeSocketClient, "Repertoire changé.", 20, 0);
+        send(
+            client->descripteurDeSocketClient,
+            "Repertoire changé.",
+            LONGUEUR_BUFFER,
+            0
+        );
     }
     else if (str_eq(choix, requeteDl))
     {
@@ -205,15 +225,23 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         );
         char dlFichier[LONGUEUR_BUFFER];
         char nomFichier[LONGUEUR_BUFFER];
+        memset(dlFichier, 0, LONGUEUR_BUFFER);
+        memset(nomFichier, 0, LONGUEUR_BUFFER);
         strcat(dlFichier, buffer);
         printf ("Vous avez choisis le fichier : %s \n", dlFichier);
+        syslog(LOG_INFO, "Vous avez choisis le fichier : %s \n", dlFichier);
         chdir("partage");
         DIR* dir = opendir(buffer);
         if (dir)
         {
             closedir(dir);
             chdir(buffer);
-            send(client->descripteurDeSocketClient, "Le dossier existe bien.", LONGUEUR_BUFFER, 0);
+            send(
+                client->descripteurDeSocketClient,
+                "Le dossier existe bien.",
+                LONGUEUR_BUFFER, 
+                0
+            );
 
             system ("ls -C > resultat.txt");
             FILE* fichierLs = fopen("resultat.txt", "r");
@@ -246,17 +274,33 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
                 strcat(dlFichier, nomFichier);
 
                 printf ("Fichier à envoyer : %s\n", dlFichier);
+                syslog(LOG_INFO, "Fichier à envoyer : %s\n", dlFichier);
                 
-                FILE* fichierDl = fopen(dlFichier+1, "r");
+                FILE* fichierDl = fopen(dlFichier, "r");
                 if (fichierDl)
                 {
-                    send(client->descripteurDeSocketClient, "Le fichier existe bien, envoi en cours...", LONGUEUR_BUFFER, 0);
+                    send(
+                        client->descripteurDeSocketClient,
+                        "Le fichier existe bien, envoi en cours...",
+                        LONGUEUR_BUFFER,
+                        0
+                    );
                     // on envoie le nom du fichier en 1er
-                    send(client->descripteurDeSocketClient, dlFichier+1, LONGUEUR_BUFFER, 0);
+                    send(
+                        client->descripteurDeSocketClient,
+                        dlFichier,
+                        LONGUEUR_BUFFER,
+                        0
+                    );
                     // on récupère le contenu du fichier
                     fgets(buffer, LONGUEUR_BUFFER, fichierDl);
                     // on envoie le contenu du fichier
-                    send(client->descripteurDeSocketClient, buffer, LONGUEUR_BUFFER, 0);
+                    send(
+                        client->descripteurDeSocketClient,
+                        buffer,
+                        LONGUEUR_BUFFER,
+                        0
+                    );
                     // on ferme le fichier
                     fclose(fichierDl);
                     chdir("..");
@@ -265,33 +309,96 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
                 else
                 {
                     printf("Erreur d'ouverture du fichier.\n");
-                    send(client->descripteurDeSocketClient, "Erreur d'ouverture du fichier", LONGUEUR_BUFFER, 0);
+                    syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
+                    send(
+                        client->descripteurDeSocketClient,
+                        "Erreur d'ouverture du fichier",
+                        LONGUEUR_BUFFER,
+                        0
+                    );
                 }
             }
             else
             {
                 printf("Erreur d'ouverture du fichier.\n");
+                syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
             }
             system("rm -f resultat.txt");
         }
         else
         {
-            send(client->descripteurDeSocketClient, "Fichier introuvable.", LONGUEUR_BUFFER, 0);
+            send(
+                client->descripteurDeSocketClient,
+                "Fichier introuvable.",
+                LONGUEUR_BUFFER,
+                0
+            );
         }
     }
     else if (str_eq(choix, requeteSend))
     {
         char buffer[LONGUEUR_BUFFER];
-        int nb_octets_lus = 0;
-        send(client->descripteurDeSocketClient, "Récéption en cours...", 20, 0);
+        
         recv(
             client->descripteurDeSocketClient,
             buffer,
             LONGUEUR_BUFFER,
             0
         );
-        
+        chdir("partage");
         char* nomDuFichier = buffer;
+        DIR* dir = opendir(nomDuFichier);
+        if (dir)
+        {
+            closedir(dir);
+            printf("Le dossier existe déjà.\n");
+            syslog(LOG_INFO, "Le dossier existe déjà.\n");
+            chdir(nomDuFichier);
+            system ("ls -C > resultat.txt");
+            FILE* fichierLs = fopen("resultat.txt", "r");
+            if (fichierLs)
+            {
+                // lecture du fichier pour obtenir le dernier chiffre présent dans le fichier
+                int dernierChiffre = 0;
+                char* version;
+                char bufferLs[LONGUEUR_BUFFER];
+                fgets(bufferLs, LONGUEUR_BUFFER, fichierLs);
+                fclose(fichierLs);
+                system("rm -f resultat.txt");
+                int i = 0;
+                while (i < LONGUEUR_BUFFER)
+                {
+                    if (bufferLs[i] == '.')
+                    {
+                        dernierChiffre++;
+                    }
+                    i++;
+                }
+                printf("Dernier chiffre : %d\n", dernierChiffre);
+                version = itoa (dernierChiffre, 10);
+
+                strcat(nomDuFichier, "-v");
+                strcat(nomDuFichier, version);   
+            }
+            else
+            {
+                printf("Erreur d'ouverture du fichier.\n");
+                syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
+            }
+        }
+        else
+        {
+            printf("Le dossier n'existe pas. Création en cours...\n");
+            syslog(LOG_INFO, "Le dossier n'existe pas. Création en cours...\n");
+            mkdir(nomDuFichier, 0777);
+            printf("Dossier créé.\n");
+            syslog(LOG_INFO, "Dossier créé.\n");
+            chdir(nomDuFichier);
+
+            strcat(nomDuFichier, "-v1");
+        }
+        
+        strcat(nomDuFichier, ".txt");
         FILE* fichier = fopen(nomDuFichier, "w");
         if (fichier)
         {
@@ -301,14 +408,30 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
                 LONGUEUR_BUFFER,
                 0
             );
+            printf("Reception reussie.\n");
+            syslog(LOG_INFO, "Reception reussie.\n");
+            send(
+                client->descripteurDeSocketClient,
+                "Reception reussie",
+                LONGUEUR_BUFFER,
+                0
+            );
             fputs (buffer, fichier);
+            fclose (fichier);
         }
         else
         {
-            printf ("Le fichier %s n'a pas pu être ouvert.\n", nomDuFichier);
+            printf ("Erreur d'ouverture du fichier.");
+            syslog(LOG_ERR, "Erreur d'ouverture du fichier.");
+            send(
+                client->descripteurDeSocketClient,
+                "Erreur d'ouverture du fichier.",
+                LONGUEUR_BUFFER,
+                0
+            );
         }
-        fclose (fichier);
-
+        chdir("..");
+        chdir("..");
     }
     else if (str_eq(choix, requeteExit))
     {
@@ -344,6 +467,11 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     else if (str_eq(choix, requeteShutdown))
     {
         sortie = 0;
-        send(client->descripteurDeSocketClient, "Shutdown effectué.", 20, 0);
+        send(
+            client->descripteurDeSocketClient,
+            "Shutdown effectué.",
+            LONGUEUR_BUFFER,
+            0
+        );
     }
 }

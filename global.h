@@ -23,6 +23,7 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 #define LONGUEUR_BUFFER 1024         // Taille du buffer de lecture
 
