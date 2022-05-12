@@ -30,7 +30,7 @@
 #define ipMachine "127.0.0.1"        // Définition de l'ip du serveur avec la valeur 127.0.0.1.
 #define PORT 2000                    // Il définit le numéro de port à 2000.
 #define requeteConnectee "connectee" // Il définit la requête à envoyer au serveur.
-#define requeteLs       "ls partage > resultat.txt"
+#define requeteLs       "ls -C partage > resultat.txt"
 #define requeteCd       "cd"
 #define requeteSend     "send"
 #define requeteDl       "dl"

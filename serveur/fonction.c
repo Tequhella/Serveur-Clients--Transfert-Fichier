@@ -170,9 +170,11 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         system(requeteLs);
         FILE* fichier = fopen("resultat.txt", "r");
         char buffer[LONGUEUR_BUFFER];
+        memset(buffer, 0, LONGUEUR_BUFFER);
         if (fichier)
         {
             fgets(buffer, LONGUEUR_BUFFER, fichier);
+            printf("%s\n", buffer);
             send(
                 client->descripteurDeSocketClient,
                 buffer,
@@ -191,7 +193,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     else if (str_eq(choix, requeteCd))
     {
         char buffer[LONGUEUR_BUFFER];
-        int nb_octets_lus = 0;
+        memset(buffer, 0, LONGUEUR_BUFFER);
         recv(
             client->descripteurDeSocketClient,
             buffer,
@@ -217,6 +219,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     else if (str_eq(choix, requeteDl))
     {
         char buffer[LONGUEUR_BUFFER];
+        memset(buffer, 0, LONGUEUR_BUFFER);
         recv(
             client->descripteurDeSocketClient,
             buffer,
@@ -338,7 +341,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     else if (str_eq(choix, requeteSend))
     {
         char buffer[LONGUEUR_BUFFER];
-        
+        memset(buffer, 0, LONGUEUR_BUFFER);
         recv(
             client->descripteurDeSocketClient,
             buffer,
@@ -466,7 +469,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
     }
     else if (str_eq(choix, requeteShutdown))
     {
-        sortie = 0;
+        *sortie = 0;
         send(
             client->descripteurDeSocketClient,
             "Shutdown effectué.",
