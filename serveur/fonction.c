@@ -254,7 +254,9 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
                 int dernierChiffre = 0;
                 char* version;
                 char bufferLs[LONGUEUR_BUFFER];
+                memset(bufferLs, 0, LONGUEUR_BUFFER);
                 fgets(bufferLs, LONGUEUR_BUFFER, fichierLs);
+                printf ("%s\n", bufferLs);
                 fclose(fichierLs);
                 system("rm -f resultat.txt");
                 int i = 0;
