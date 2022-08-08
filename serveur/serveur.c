@@ -22,7 +22,7 @@
  * @param argv 
  * @return int 
  */
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     openlog("serveur", LOG_PID | LOG_CONS, LOG_LOCAL0);
 
@@ -50,6 +50,7 @@ int main(int argc, char **argv)
     }
     printf("Socket créé.\n");
     syslog(LOG_INFO, "Socket créé.\n");
+
     /* Etape 3 */
     /***********/
     if (bind(descripteurDeSocketServeur,(struct sockaddr *)&addr,sizeof(struct sockaddr_in)) < 0)
@@ -60,6 +61,7 @@ int main(int argc, char **argv)
     }
     printf("Socket liée\n");
     syslog(LOG_INFO, "Socket liée\n");
+
     /* Etape 4 */
     /***********/
     if (listen(descripteurDeSocketServeur, 1) < 0)
@@ -76,35 +78,53 @@ int main(int argc, char **argv)
         syslog(LOG_ERR, "Erreur d'allocation de mémoire du client.\n");
         return -1;
     }
+    client->descripteurDeSocketClient = 0;
+
     uint8_t taille      = 1; // taille du tableau client
     uint8_t indexClient = 0; // index du client
     uint8_t sortie      = 1; // sortie du programme
+
     char buffer[LONGUEUR_BUFFER]; // tableau de buffer qui va être utilisé pour stocker les buffers des clients
     memset(buffer, 0, LONGUEUR_BUFFER); // on initialise le tableau de buffer à 0
-    
-    stockage_client(client, descripteurDeSocketServeur); // stockage du client
+
+    ArgumentThreadClient argumentThreadClient = {
+        .client = client,
+        .descripteurDeSocketServeur = descripteurDeSocketServeur,
+        .indexClient = 0,
+        .taille = 0,
+        .sortie = &sortie
+    }; // structure qui va être utilisée pour lancer le thread client
+
+    pthread_t thread_connexion; // thread qui va être créé pour la réception des connexions
+
+    /* Création du thread de connexion */
+    if (pthread_create(&thread_connexion, NULL, stockage_client, (void*)&argumentThreadClient) != 0)
+    {
+        perror("Erreur lors de la création du thread de connexion.\n");
+        syslog(LOG_ERR, "Erreur lors de la création du thread de connexion.\n");
+        return -1;
+    }
+    printf("Thread de connexion créé.\n");
+    syslog(LOG_INFO, "Thread de connexion créé.\n");
 
     /* Etape 5 */
     /***********/
     while (sortie == 1)
     {
-        taille      = sizeof(client) / sizeof(Client);
-        indexClient = taille - 1;
         
-        if (client->descripteurDeSocketClient != 0)
-        {
-            reception_client(client, &taille, buffer); // reception du message du client
-        }
-        
-        tri_choix(client, indexClient, buffer, &sortie); // tri du client
         
     }
+    pthread_exit(NULL); // sortie du thread
+
     /* Il ferme le socket de chaque client et le socket du serveur. */
-    close(client->descripteurDeSocketClient);
+    for (int i = 0; i < taille; i++)
+    {
+        close(client[i].descripteurDeSocketClient);
+    }
     close(descripteurDeSocketServeur);
     closelog();
 
-    /* Il libère la mémoire allouée au client et au tampon. */
+    /* Il libère la mémoire allouée au client. */
     free (client);
     client = NULL;
 

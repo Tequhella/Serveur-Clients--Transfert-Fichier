@@ -74,12 +74,11 @@ int main(int argc, char **argv)
     uint8_t sortie = 1;
 
     reception_serveur(&serveur, buffer);
-    printf("\nReponse du serveur : %s \n", buffer);
 
     char mot[20];
     char choixFichier[20];
 
-    system("clear");
+    //system("clear");
     printf("Voici les commandes que vous pouvez utiliser : \nls\n%s\n%s\n%s\n%s\n%s\n", requeteCd, requeteSend, requeteHelp, requeteExit, requeteShutdown);
 
     while (sortie == 1)
@@ -100,7 +99,7 @@ int main(int argc, char **argv)
             
             // On vérifie que le serveur nous a bien envoyé une réponse
             reception_serveur(&serveur, buffer);
-            printf("\nReponse du serveur : %s \n", buffer);
+            
             if (str_eq(buffer, "Requete lue."))
             {
                 printf("Veuillez entrer le nom du fichier que vous voulez envoyer : ");
@@ -131,7 +130,7 @@ int main(int argc, char **argv)
                     printf("Le fichier n'existe pas.\n");
                 }
                 reception_serveur(&serveur, buffer);
-                printf("\nReponse du serveur : %s \n", buffer);
+                
             }
             else
             {
@@ -149,7 +148,7 @@ int main(int argc, char **argv)
                 0
             );
             reception_serveur(&serveur, buffer);
-            printf("\nReponse du serveur : %s \n", buffer);
+            
             if (str_eq(buffer, "Requete lue."))
             {
                 reception_serveur(&serveur, buffer);
@@ -167,7 +166,7 @@ int main(int argc, char **argv)
                 0
             );
             reception_serveur(&serveur, buffer);
-            printf("\nReponse du serveur : %s \n", buffer);
+            
             if (str_eq(buffer, "Requete lue."))
             {
                 printf("Veuillez entrer le nom du fichier que vous voulez recevoir : ");
@@ -179,16 +178,16 @@ int main(int argc, char **argv)
                     0
                 );
                 reception_serveur(&serveur, buffer);
-                printf("\nReponse du serveur : %s \n", buffer);
+                
                 if (str_eq(buffer, "Le dossier existe bien."))
                 {
                     reception_serveur(&serveur, buffer);
-                    printf("\nReponse du serveur : %s \n", buffer);
+                    
                     if (str_eq(buffer, "Le fichier existe bien, envoi en cours..."))
                     {
                         // On reçoit le nom du fichier
                         reception_serveur(&serveur, buffer);
-                        printf("\nReponse du serveur : %s \n", buffer);
+                        
                         FILE* fichier = fopen(buffer, "w");
                         if (fichier)
                         {
@@ -227,7 +226,7 @@ int main(int argc, char **argv)
                 0
             );
             reception_serveur(&serveur, buffer);
-            printf("\nReponse du serveur : %s \n", buffer);
+            
             if (str_eq(buffer, "Requete lue."))
             {
                 sortie = 0;
@@ -247,7 +246,7 @@ int main(int argc, char **argv)
                 0
             );
             reception_serveur(&serveur, buffer);
-            printf("\nReponse du serveur : %s \n", buffer);
+            
             if (str_eq(buffer, "Requete lue."))
             {
                 printf("Shutdown reussi \n");
@@ -268,7 +267,7 @@ int main(int argc, char **argv)
                 0
             );
             reception_serveur(&serveur, buffer);
-            printf("\nReponse du serveur : %s \n", buffer);
+            
             if (str_eq(buffer, "Requete lue."))
             {
                 printf("Veuillez entrer le nom du dossier que vous voulez acceder : ");
@@ -280,7 +279,7 @@ int main(int argc, char **argv)
                     0
                 );
                 reception_serveur(&serveur, buffer);
-                printf("\nReponse du serveur : %s \n", buffer);
+                
                 if (str_eq(buffer, "Ok."))
                 {
                     printf("Accès au dossier reussi \n");

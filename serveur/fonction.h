@@ -29,6 +29,16 @@ typedef struct Client
 }
 Client;
 
+typedef struct ArgumentThreadClient
+{
+    Client*  client;
+    int      descripteurDeSocketServeur;
+    uint8_t  indexClient;
+    uint8_t  taille;
+    uint8_t* sortie;
+}
+ArgumentThreadClient;
+
 /**
  * @brief fonction itoa, convertit un entier en une chaîne de caractères.
  * 
@@ -60,10 +70,11 @@ int8_t config_addr(struct sockaddr_in *addr);
 /**
  * @brief fonction stockage_client, stockage du client dans la structure Client.
  * 
- * @param client : structure client
- * @param longueurDeAdresseDuClient : longueur de l'adresse du client
+ * @param argumentThread : structure contenant le client et le descripteur de socket du serveur.
+ * (client : structure client)
+ * (longueurDeAdresseDuClient : longueur de l'adresse du client)
  */
-void stockage_client(Client* client, int descripteurDeSocketServeur);
+void* stockage_client(void* argumentThread);
 
 /**
  * @brief fonction reception_client, reception du message du client.
@@ -74,7 +85,7 @@ void stockage_client(Client* client, int descripteurDeSocketServeur);
  * 
  * @return int : 0 si succès, -1 sinon
  */
-int8_t reception_client(Client *client, uint8_t* taille, char* buffer);
+void* reception_client(void* argumentThread);
 
 /**
  * @brief fonction tri_choix, tri du choix du client.

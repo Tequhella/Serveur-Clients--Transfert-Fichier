@@ -68,32 +68,37 @@ int8_t config_addr(struct sockaddr_in* addr)
 /**
  * @brief fonction stockage_client, stockage du client dans la structure Client.
  * 
- * @param client : structure client
- * @param longueurDeAdresseDuClient : longueur de l'adresse du client
+ * @param argumentThread : structure contenant le client et le descripteur de socket du serveur.
+ * (client : structure client)
+ * (longueurDeAdresseDuClient : longueur de l'adresse du client)
  */
-void stockage_client(Client* client, int descripteurDeSocketServeur)
+void* stockage_client(void* argumentThread)
 {
+    Client* client = ((ArgumentThreadClient*)argumentThread)->client;
+    int     descripteurDeSocketServeur = ((ArgumentThreadClient*)argumentThread)->descripteurDeSocketServeur;
     /* On obtient le nombre d'éléments dans le tableau. */
     uint8_t taille = 1;
     uint8_t indexClient;
 
-    indexClient = taille - 1;
+    while (1)
+    {
         /* Accepte un client et l'ajoute au tableau client. */
-        client->descripteurDeSocketClient = accept(
+        client[indexClient].descripteurDeSocketClient = accept(
             descripteurDeSocketServeur,
-            (struct sockaddr *)&(client->adresseDuClient),
-            &(client->longueurDeAdresseDuClient)
+            (struct sockaddr *)&(client[indexClient].adresseDuClient),
+            &(client[indexClient].longueurDeAdresseDuClient)
         );
         taille++;
+        indexClient = taille - 1;
 
         /* Vérifie si le client est connecté. */
-        if (client->descripteurDeSocketClient < 0)
+        if (client[indexClient].descripteurDeSocketClient < 0)
         {
             perror("Erreur de connexion.\n");
             syslog(LOG_ERR, "Erreur de connexion.\n");
             free(client);
             client = NULL;
-            return;
+            return NULL;
         }
         else if (taille < 4)
         {
@@ -104,54 +109,103 @@ void stockage_client(Client* client, int descripteurDeSocketServeur)
             place à un nouveau client. */
             printf ("Envoi de la réponse au client.");
             syslog(LOG_INFO, "Envoi de la réponse au client.");
-            send (client->descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
-            /*
+            send (client[indexClient].descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
+            
             client = (Client*) realloc(client, sizeof(client) + sizeof(Client));
             if (!client)
             {
                 perror("Erreur d'allocation de mémoire.\n");
-                free(client);
+                syslog(LOG_ERR, "Erreur d'allocation de mémoire.\n");
                 client = NULL;
-                return;
+                return NULL;
             }
-            */
+            else
+            {
+                printf("Client ajouté.\n");
+                syslog(LOG_INFO, "Client ajouté.\n");
+
+                pthread_t thread_reception; /* Thread de réception. */
+
+                ArgumentThreadClient argumentThreadClient = {
+                    .client = client,
+                    .descripteurDeSocketServeur = 0,
+                    .indexClient = indexClient,
+                    .taille = taille,
+                    .sortie = ((ArgumentThreadClient*)argumentThread)->sortie
+                };
+
+                /* Création du thread de réception. */
+                if (pthread_create(&thread_reception, NULL, reception_client, (void*)&argumentThreadClient) != 0)
+                {
+                    perror("Erreur de création du thread de réception.\n");
+                    syslog(LOG_ERR, "Erreur de création du thread de réception.\n");
+                    client = NULL;
+                    return NULL;
+                }
+                else
+                {
+                    printf("Thread de réception créé.\n");
+                    syslog(LOG_INFO, "Thread de réception créé.\n");
+                }
+            }
         }
         else
         {
             printf ("Le nombre de clients maximum est atteint.\n");
             syslog(LOG_INFO, "Le nombre de clients maximum est atteint.\n");
-            send (client->descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
-            close (client->descripteurDeSocketClient);
+            send (client[indexClient].descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
+            close (client[indexClient].descripteurDeSocketClient);
             taille--;
         }
+    }
 }
+
 
 /**
  * @brief fonction reception_client, reception du message du client.
  * 
- * @param client : structure client
- * @param taille : taille du tableau
- * @param buffer : message du client
- * 
- * @return int : 0 si succès, -1 sinon
+ * @param argumentThread : structure contenant le client, l'index du client, la taille et du stock de client et le buffer.
+ * (client : structure client)
+ * (indexClient : index du client)
+ * (taille : taille du tableau)
  */
-int8_t reception_client(Client *client, uint8_t* taille, char* buffer)
+void* reception_client(void* argumentThread)
 {
-    /* Variable utilisée pour stocker le nombre d'octets lus. */
-    int nb_octets_lus;
-    printf("\nLecture de la requete : \n");
-    syslog(LOG_INFO, "Lecture de la requete : \n");
-    recv(
-        client->descripteurDeSocketClient,
-        buffer,
-        LONGUEUR_BUFFER,
-        0
-    );
-    printf("%s\n", buffer);
-    syslog(LOG_INFO, "%s\n", buffer);
-    printf("Lecture de la requete terminée.\n\n");
-    syslog(LOG_INFO, "Lecture de la requete terminée.\n\n");
-    send(client->descripteurDeSocketClient, "Requete lue.", 20, 0);
+    Client*  client      = ((ArgumentThreadClient*)argumentThread)->client;
+    uint8_t  indexClient = ((ArgumentThreadClient*)argumentThread)->indexClient;
+    uint8_t  taille      = ((ArgumentThreadClient*)argumentThread)->taille;
+    uint8_t* sortie      = ((ArgumentThreadClient*)argumentThread)->sortie;
+
+    /* On récupère le buffer. */
+    char buffer[LONGUEUR_BUFFER];
+
+    while (1)
+    {
+        memset(buffer, 0, LONGUEUR_BUFFER);
+
+        /* Variable d'indexage des clients. */
+        printf("\nLecture de la requete : \n");
+        syslog(LOG_INFO, "Lecture de la requete : \n");
+
+        /* Lecture du message du client. */
+        recv(
+            client[indexClient].descripteurDeSocketClient,
+            buffer,
+            LONGUEUR_BUFFER,
+            0
+        );
+
+        printf("%s\n", buffer);
+        syslog(LOG_INFO, "%s\n", buffer);
+
+        printf("Lecture de la requete terminée.\n\n");
+        syslog(LOG_INFO, "Lecture de la requete terminée.\n\n");
+
+        /* On envoie la confirmation au client. */
+        send(client[indexClient].descripteurDeSocketClient, "Requete lue.", 20, 0);
+
+        tri_choix(client, indexClient, buffer, sortie); // choix du client
+    }
 }
 
 /**

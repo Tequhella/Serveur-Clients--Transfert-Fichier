@@ -62,6 +62,7 @@ void reception_serveur(Serveur* serveur, char* buffer)
         LONGUEUR_BUFFER,
         0
     );
+    printf("\nReponse du serveur : %s \n", buffer);
     /*
     int nbOctetsRecus = 0;
     do
