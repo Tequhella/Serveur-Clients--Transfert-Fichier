@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     }
     pthread_exit(NULL); // sortie du thread
 
-    /* Il ferme le socket de chaque client et le socket du serveur. */
+    /* Ferme le socket de chaque client et le socket du serveur. */
     for (int i = 0; i < taille; i++)
     {
         close(client[i].descripteurDeSocketClient);
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
     close(descripteurDeSocketServeur);
     closelog();
 
-    /* Il libère la mémoire allouée au client. */
+    /* Libère la mémoire allouée au client. */
     free (client);
     client = NULL;
 

@@ -51,9 +51,10 @@ uint8_t str_eq(const char *str1, const char *str2)
 }
 
 /**
- * @brief fonction config_addr, configuration adresse de la socket et la remplit avec le port et l'adresse du serveur.
+ * @brief Configure la structure d'addresse de socket pour utiliser le port 2000 et écouter sur toutes les
+ * interfaces
  * 
- * @param addr : adresse de la socket
+ * @param addr l'addresse à configurer
  * 
  * @return 0 si succès, -1 sinon
  */
@@ -78,7 +79,7 @@ void* stockage_client(void* argumentThread)
     int     descripteurDeSocketServeur = ((ArgumentThreadClient*)argumentThread)->descripteurDeSocketServeur;
     /* On obtient le nombre d'éléments dans le tableau. */
     uint8_t taille = 1;
-    uint8_t indexClient;
+    uint8_t indexClient = 0;
 
     while (1)
     {
@@ -88,15 +89,16 @@ void* stockage_client(void* argumentThread)
             (struct sockaddr *)&(client[indexClient].adresseDuClient),
             &(client[indexClient].longueurDeAdresseDuClient)
         );
-        taille++;
-        indexClient = taille - 1;
+
+        /* Calcul de la taille du tableau client. */
+        taille = sizeof(client) / sizeof(Client);
 
         /* Vérifie si le client est connecté. */
         if (client[indexClient].descripteurDeSocketClient < 0)
         {
             perror("Erreur de connexion.\n");
             syslog(LOG_ERR, "Erreur de connexion.\n");
-            free(client);
+
             client = NULL;
             return NULL;
         }
@@ -107,15 +109,17 @@ void* stockage_client(void* argumentThread)
 
             /* On prévient le client qu'il est bien connecté et réalloue la mémoire pour laisser
             place à un nouveau client. */
-            printf ("Envoi de la réponse au client.");
-            syslog(LOG_INFO, "Envoi de la réponse au client.");
+            printf ("Envoi de la réponse au client.\n");
+            syslog(LOG_INFO, "Envoi de la réponse au client.\n");
             send (client[indexClient].descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
             
             client = (Client*) realloc(client, sizeof(client) + sizeof(Client));
+            /* Allocation de mémoire pour ajouter un futur client. */
             if (!client)
             {
                 perror("Erreur d'allocation de mémoire.\n");
                 syslog(LOG_ERR, "Erreur d'allocation de mémoire.\n");
+                
                 client = NULL;
                 return NULL;
             }
@@ -128,9 +132,9 @@ void* stockage_client(void* argumentThread)
 
                 ArgumentThreadClient argumentThreadClient = {
                     .client = client,
-                    .descripteurDeSocketServeur = 0,
+                    .descripteurDeSocketServeur = 0, // inutil dans ce context
                     .indexClient = indexClient,
-                    .taille = taille,
+                    .taille = 0, // inutil dans ce context
                     .sortie = ((ArgumentThreadClient*)argumentThread)->sortie
                 };
 
@@ -139,6 +143,7 @@ void* stockage_client(void* argumentThread)
                 {
                     perror("Erreur de création du thread de réception.\n");
                     syslog(LOG_ERR, "Erreur de création du thread de réception.\n");
+                    
                     client = NULL;
                     return NULL;
                 }
@@ -146,6 +151,8 @@ void* stockage_client(void* argumentThread)
                 {
                     printf("Thread de réception créé.\n");
                     syslog(LOG_INFO, "Thread de réception créé.\n");
+
+                    indexClient = taille - 1;
                 }
             }
         }
@@ -153,27 +160,27 @@ void* stockage_client(void* argumentThread)
         {
             printf ("Le nombre de clients maximum est atteint.\n");
             syslog(LOG_INFO, "Le nombre de clients maximum est atteint.\n");
+            
             send (client[indexClient].descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
             close (client[indexClient].descripteurDeSocketClient);
-            taille--;
         }
     }
 }
 
 
 /**
- * @brief fonction reception_client, reception du message du client.
+ * @brief Reçoit la requête du client et l'envoie à la fonction qui la traitera
  * 
- * @param argumentThread : structure contenant le client, l'index du client, la taille et du stock de client et le buffer.
+ * @param argumentThread structure contenant le client, l'index du client, la taille et du stock de client et le buffer.
  * (client : structure client)
  * (indexClient : index du client)
  * (taille : taille du tableau)
+ * (sortie : sortie du serveur)
  */
 void* reception_client(void* argumentThread)
 {
     Client*  client      = ((ArgumentThreadClient*)argumentThread)->client;
     uint8_t  indexClient = ((ArgumentThreadClient*)argumentThread)->indexClient;
-    uint8_t  taille      = ((ArgumentThreadClient*)argumentThread)->taille;
     uint8_t* sortie      = ((ArgumentThreadClient*)argumentThread)->sortie;
 
     /* On récupère le buffer. */
@@ -209,12 +216,13 @@ void* reception_client(void* argumentThread)
 }
 
 /**
- * @brief fonction tri_choix, tri du choix du client.
+ * @brief C'est une fonction qui reçoit un client, un index du tableau client, un choix et un booléen. Il trie ensuite
+ * le choix du client et exécute l'action correspondante
  * 
- * @param client : structure client
- * @param indexClient : index du client
- * @param choix : choix du client
- * @param sortie : sortie du programme
+ * @param client la structure cliente
+ * @param indexClient l'index du client dans le tableau client.
+ * @param choix le choix du client
+ * @param sortie un booléen indiquant la fermeture du serveur ou pas.
  */
 void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie)
 {

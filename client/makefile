@@ -1,6 +1,6 @@
 CC = gcc
 
-GCC = -lpthread -D_REENTRANT
+GCC = -pthread -D_REENTRANT
 
 
 all: build/client.o build/fonction.o
