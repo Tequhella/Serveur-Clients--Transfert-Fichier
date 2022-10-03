@@ -27,8 +27,8 @@
 #include <sys/stat.h>
 
 #define LONGUEUR_BUFFER 1024         // Taille du buffer de lecture
-#undef NULL                          // Pour éviter les erreurs de compilation
-#define NULL (void*)0                // Valeur NULL
+//#undef NULL                          // Pour éviter les erreurs de compilation
+//#define NULL (void*)0                // Valeur NULL
 
 #define ipMachine "127.0.0.1"        // Définition de l'ip du serveur avec la valeur 127.0.0.1.
 #define PORT 2000                    // Il définit le numéro de port à 2000.

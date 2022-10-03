@@ -71,7 +71,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    Client* client = malloc (sizeof(Client)); // client qui va être créé à chaque fois qu'un client se connecte
+    Client* client = malloc (sizeof(Client)); // client créé et sera agrandit à chaque fois qu'un client se connecte
     if (!client)
     {
         perror("Erreur d'allocation de mémoire du client.\n");
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
         .indexClient = 0,
         .taille = 0,
         .sortie = &sortie
-    }; // structure qui va être utilisée pour lancer le thread client
+    }; // structure qui va être utilisée comme argument pour lancer le thread client
 
     pthread_t thread_connexion; // thread qui va être créé pour la réception des connexions
 
@@ -116,6 +116,9 @@ int main(int argc, char** argv)
     }
     pthread_exit(NULL); // sortie du thread
 
+    /* Recalcul de la taille du tableau client. */
+    taille = sizeof(client) / sizeof(Client);
+
     /* Ferme le socket de chaque client et le socket du serveur. */
     for (int i = 0; i < taille; i++)
     {
@@ -125,7 +128,7 @@ int main(int argc, char** argv)
     closelog();
 
     /* Libère la mémoire allouée au client. */
-    free (client);
+    free(client);
     client = NULL;
 
     return 0;

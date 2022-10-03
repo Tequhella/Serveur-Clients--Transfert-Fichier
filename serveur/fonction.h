@@ -77,13 +77,13 @@ int8_t config_addr(struct sockaddr_in *addr);
 void* stockage_client(void* argumentThread);
 
 /**
- * @brief fonction reception_client, reception du message du client.
+ * @brief Reçoit la requête du client et l'envoie à la fonction qui la traitera
  * 
- * @param client : structure client
- * @param taille : taille du tableau
- * @param buffer : message du client
- * 
- * @return int : 0 si succès, -1 sinon
+ * @param argumentThread structure contenant le client, l'index du client, la taille et du stock de client et le buffer.
+ * (client : structure client)
+ * (indexClient : index du client)
+ * (taille : taille du tableau)
+ * (sortie : sortie du serveur)
  */
 void* reception_client(void* argumentThread);
 
