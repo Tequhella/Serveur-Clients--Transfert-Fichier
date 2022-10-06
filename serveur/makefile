@@ -1,6 +1,6 @@
 CC = gcc
 
-GCC = -pthread -D_REENTRANT
+GCC = -pthread -D_REENTRANT -Wall
 
 
 all: build/serveur.o build/fonction.o

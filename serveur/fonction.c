@@ -12,7 +12,6 @@
 
 #include "fonction.h"
 
-
 /**
  * @brief fonction itoa, convertit un entier en une chaîne de caractères.
  * 
@@ -33,14 +32,14 @@ char* itoa(int val, int base)
 	return &buf[i+1];
 }
 /**
- * @brief fonction str_eq, test légalité de 2 chaînes de caractères.
+ * @brief fonction strEq, test légalité de 2 chaînes de caractères.
  * 
  * @param str1 La première chaîne à comparer.
  * @param str2 La chaîne à comparer.
  * 
  * @return 1 si les deux chaînes sont égales, 0 sinon.
  */
-uint8_t str_eq(const char *str1, const char *str2)
+uint8_t strEq(const char *str1, const char *str2)
 {
   while (*str1 == *str2 && *str1)
   {
@@ -51,6 +50,25 @@ uint8_t str_eq(const char *str1, const char *str2)
 }
 
 /**
+ * @brief fonction printfSyslog, imprime la chaîne donnée sur la console et via le système de journalisation.
+ * 
+ * @param str La chaîne à imprimer.
+ */
+void printfSyslog(const char* str, const uint8_t logType)
+{
+    if (logType == LOG_PERROR)
+    {
+        perror(str);
+        syslog(logType, "%s", str);
+    }
+    else
+    {
+        printf("%s", str);
+        syslog(logType, "%s", str);
+    }
+}
+
+/**
  * @brief Configure la structure d'addresse de socket pour utiliser le port 2000 et écouter sur toutes les
  * interfaces
  * 
@@ -58,7 +76,7 @@ uint8_t str_eq(const char *str1, const char *str2)
  * 
  * @return 0 si succès, -1 sinon
  */
-int8_t config_addr(struct sockaddr_in* addr)
+int8_t configAddr(struct sockaddr_in* addr)
 {
     addr->sin_family = PF_INET;
     addr->sin_port = htons(2000);
@@ -67,20 +85,71 @@ int8_t config_addr(struct sockaddr_in* addr)
 }
 
 /**
- * @brief fonction stockage_client, stockage du client dans la structure Client.
+ * @brief fonction verifJoinThread, vérifie la fin de fonctionnement du thread.
+ * 
+ * @param thread Le thread donné à vérifier.
+ * @param index Index du tableau de thread si c'en est un.
+ * 
+ */
+void verifJoinThread(pthread_t* thread, uint8_t index)
+{
+    void* retval;
+    int ret = pthread_join(thread[index], &retval);
+    if (retval == PTHREAD_CANCELED)
+        printfSyslog("Le thread a été annulé - ", LOG_INFO);
+    else
+    {
+        printf("Valeur retournée %ld - ", (unsigned long)retval);
+        syslog(LOG_INFO, "Valeur retournée %ld -", (unsigned long)retval);
+    }
+
+    switch (ret)
+    {
+        case 0:
+            printfSyslog("Le thread a été joigné avec succès\n", LOG_INFO);
+            break;
+        case EDEADLK:
+            printfSyslog("Impasse detectée\n", LOG_ERR);
+            break;
+        case EINVAL:
+            printfSyslog("Le thread n'est pas joignable\n", LOG_ERR);
+            break;
+        case ESRCH:
+            printfSyslog("Aucun thread avec l'ID donnée n'a été trouvée\n", LOG_ERR);
+            break;
+        default:
+            printfSyslog("Une erreur est survenue lors du joignage\n", LOG_ERR);
+    }
+}
+
+/**
+ * @brief fonction stockageClient, stockage du client dans la structure Client.
  * 
  * @param argumentThread : structure contenant le client et le descripteur de socket du serveur.
  * (client : structure client)
  */
-void* stockage_client(void* argumentThread)
+void* stockageClient(void* argumentThread)
 {
-    Client* client = ((ArgumentThreadClient*)argumentThread)->client;
-    int     descripteurDeSocketServeur = ((ArgumentThreadClient*)argumentThread)->descripteurDeSocketServeur;
-    /* On obtient le nombre d'éléments dans le tableau. */
-    uint8_t taille = 1;
-    uint8_t indexClient = 0;
+    unsigned long tailleMemoire       = sizeof(Client);
+    unsigned long tailleMemoireThread = sizeof(pthread_t);
+    Client* client = (Client*) malloc (tailleMemoire); // client créé et sera agrandit à chaque fois qu'un client se connecte
+    if (!client)
+    {
+        printfSyslog("Erreur d'allocation de mémoire du client", LOG_PERROR);
+        return NULL;
+    }
+    client->descripteurDeSocketClient = 0;
+    int    descripteurDeSocketServeur = ((ArgumentThreadClient*)argumentThread)->descripteurDeSocketServeur;
+    uint8_t taille                    = 1;
+    uint8_t indexClient               = 0;
+    pthread_t* threadReception        = (pthread_t*) malloc(tailleMemoireThread); /* Thread de réception. */
+    if (!threadReception)
+    {
+        printfSyslog("Erreur d'allocation de mémoire du thread de reception", LOG_PERROR);
+        return NULL;
+    }
 
-    while (1)
+    while (*((ArgumentThreadClient*)argumentThread)->sortie == 1)
     {
         /* On obtient la taille de l'adresse du client. */
         client[indexClient].longueurDeAdresseDuClient = sizeof(struct sockaddr_in);
@@ -92,21 +161,28 @@ void* stockage_client(void* argumentThread)
         );
 
         /* Calcul de la taille du tableau client. */
-        taille = sizeof(client) / sizeof(Client);
+        taille = tailleMemoire / sizeof(Client);
 
         /* Vérifie si le client est connecté. */
         if (client[indexClient].descripteurDeSocketClient < 0)
         {
-            perror("Erreur de connexion.\n");
-            syslog(LOG_ERR, "Erreur de connexion.\n");
+            printfSyslog("Erreur de connexion", LOG_PERROR);
 
-            client = NULL;
+            if(client)
+            {
+                for (uint8_t i = 0; i < taille - 1; i++)
+                    verifJoinThread(threadReception, i);
+
+                free(client);
+                client = NULL;
+                free(threadReception);
+                threadReception = NULL;
+            }
             return NULL;
         }
         else if (taille < 4)
         {
-            printf("Client connecté.\n");
-            syslog(LOG_INFO, "Client connecté.\n");
+            printfSyslog("Client connecté.\n", LOG_INFO);
 
             /* On récupère l'adresse IP du client et l'imprime avec le descripteur de socket la longueur de l'adresse */
             unsigned char* adresse = (unsigned char*)&client[indexClient].adresseDuClient.sin_addr.s_addr;
@@ -135,66 +211,98 @@ void* stockage_client(void* argumentThread)
 
             /* On prévient le client qu'il est bien connecté et on réalloue la mémoire pour laisser
             place à un nouveau client. */
-            printf ("Envoi de la réponse au client.\n");
-            syslog(LOG_INFO, "Envoi de la réponse au client.\n");
+            printfSyslog("Envoi de la réponse au client.\n", LOG_INFO);
             send (client[indexClient].descripteurDeSocketClient, "Bienvenue sur le serveur.\n", 30, 0);
             
-            /* Allocation de mémoire pour ajouter un futur client. */
-            Client* client_temp = realloc(client, sizeof(client) + sizeof(client[0]));
+            /* Reallocation de mémoire pour ajouter un futur client. */
+            tailleMemoire += sizeof(Client);
+            Client* client_temp = (Client*) realloc(client, tailleMemoire);
             
             /* Vérifie si le client n'est pas nul. */
-            if (!client)
+            if (!client_temp)
             {
-                perror("Erreur d'allocation de mémoire.\n");
-                syslog(LOG_ERR, "Erreur d'allocation de mémoire.\n");
+                printfSyslog("Erreur d'allocation de mémoire du client", LOG_PERROR);
                 
+                if (client)
+                {
+                    free(client);
+                    client = NULL;
+                }
                 return NULL;
             }
             else
             {
-                printf("Client ajouté.\n");
-                syslog(LOG_INFO, "Client ajouté.\n");
+                printfSyslog("Client ajouté.\n", LOG_INFO);
 
                 client = client_temp;
                 client_temp = NULL;
 
-                pthread_t thread_reception; /* Thread de réception. */
-
                 ArgumentThreadClient argumentThreadClient = {
                     .client = client,
-                    .descripteurDeSocketServeur = 0, // inutile dans ce context
+                    .descripteurDeSocketServeur = descripteurDeSocketServeur,
                     .indexClient = indexClient,
-                    .taille = 0, // inutile dans ce context
-                    .sortie = ((ArgumentThreadClient*)argumentThread)->sortie
+                    .taille = tailleMemoire,
+                    .sortie = ((ArgumentThreadClient*)argumentThread)->sortie,
+                    .sortieClient = NULL,
                 };
 
                 /* Création du thread de réception. */
-                if (pthread_create(&thread_reception, NULL, reception_client, (void*)&argumentThreadClient) != 0)
+                if (pthread_create(&threadReception[indexClient], NULL, receptionClient, (void*)&argumentThreadClient) != 0)
                 {
-                    perror("Erreur de création du thread de réception.\n");
-                    syslog(LOG_ERR, "Erreur de création du thread de réception.\n");
+                    printfSyslog("Erreur de création du thread de réception", LOG_PERROR);
                     
+                    free(client);
                     client = NULL;
                     return NULL;
                 }
                 else
                 {
-                    printf("Thread de réception créé.\n");
-                    syslog(LOG_INFO, "Thread de réception créé.\n");
+                    printfSyslog("Thread de réception créé", LOG_INFO);
 
+                    tailleMemoireThread += sizeof(pthread_t);
+
+                    pthread_t* threadReceptionTemp = (pthread_t*) realloc(threadReception, tailleMemoireThread);
+                    if (!threadReceptionTemp)
+                    {
+                        printfSyslog("Erreur d'allocation de mémoire du thread de reception", LOG_PERROR);
+
+                        /* Annulation des threads et libération de la mémoire. */
+                        if(threadReception)
+                        {
+                            for (uint8_t i = 0; i < taille; i++)
+                                pthread_cancel(threadReception[i]);
+                            
+                            free(threadReception);
+                            threadReception = NULL;
+                        }
+                        
+                        return NULL;
+                    }
+
+                    threadReception = threadReceptionTemp;
+                    threadReceptionTemp = NULL;
                     indexClient = taille - 1;
                 }
             }
         }
         else
         {
-            printf ("Le nombre de clients maximum est atteint.\n");
-            syslog(LOG_INFO, "Le nombre de clients maximum est atteint.\n");
+            printfSyslog("Le nombre de clients maximum est atteint.\n", LOG_INFO);
             
             send (client[indexClient].descripteurDeSocketClient, "Le nombre de clients maximum est atteint.\n", 50, 0);
             close (client[indexClient].descripteurDeSocketClient);
         }
     }
+
+    for (uint8_t i = 0; i < taille; i++)
+        verifJoinThread(threadReception, i);
+
+    free(threadReception);
+    free(client);
+    threadReception = NULL;
+    client          = NULL;
+
+    return NULL;
 }
 
 
@@ -207,42 +315,54 @@ void* stockage_client(void* argumentThread)
  * (taille : taille du tableau)
  * (sortie : sortie du serveur)
  */
-void* reception_client(void* argumentThread)
+void* receptionClient(void* argumentThread)
 {
     Client*  client      = ((ArgumentThreadClient*)argumentThread)->client;
     uint8_t  indexClient = ((ArgumentThreadClient*)argumentThread)->indexClient;
     uint8_t* sortie      = ((ArgumentThreadClient*)argumentThread)->sortie;
+    uint8_t sortieClient = 1;
 
     /* On récupère le buffer. */
     char buffer[LONGUEUR_BUFFER];
 
-    while (1)
+    while (sortieClient == 1 && *sortie == 1)
     {
         memset(buffer, 0, LONGUEUR_BUFFER);
 
         /* Variable d'indexage des clients. */
-        printf("\nLecture de la requete : \n");
-        syslog(LOG_INFO, "Lecture de la requete : \n");
+        printfSyslog("\nLecture de la requete : ", LOG_INFO);
 
         /* Lecture du message du client. */
-        recv(
-            client[indexClient].descripteurDeSocketClient,
-            buffer,
-            LONGUEUR_BUFFER,
-            0
-        );
+        if (client)
+        {
+            recv(
+                client[indexClient].descripteurDeSocketClient,
+                buffer,
+                LONGUEUR_BUFFER,
+                0
+            );
 
-        printf("%s\n", buffer);
-        syslog(LOG_INFO, "%s\n", buffer);
+            printf("%s\n", buffer);
+            syslog(LOG_INFO, "%s\n", buffer);
 
-        printf("Lecture de la requete terminée.\n\n");
-        syslog(LOG_INFO, "Lecture de la requete terminée.\n\n");
+            printfSyslog("Lecture de la requete terminée.\n\n", LOG_INFO);
 
-        /* On envoie la confirmation au client. */
-        send(client[indexClient].descripteurDeSocketClient, "Requete lue.", 20, 0);
+            /* On envoie la confirmation au client. */
+            send(client[indexClient].descripteurDeSocketClient, "Requete lue.", 20, 0);
 
-        tri_choix(client, indexClient, buffer, sortie); // choix du client
+            // choix du client
+            triChoix(
+                client, 
+                indexClient, 
+                buffer, 
+                sortie, 
+                &sortieClient, 
+                ((ArgumentThreadClient*)argumentThread)->taille, 
+                ((ArgumentThreadClient*)argumentThread)->descripteurDeSocketServeur
+            ); 
+        }
     }
+    return NULL;
 }
 
 /**
@@ -253,11 +373,13 @@ void* reception_client(void* argumentThread)
  * @param indexClient l'index du client dans le tableau client.
  * @param choix le choix du client
  * @param sortie un booléen indiquant la fermeture du serveur ou pas.
+ * @param tailleMemoire la taille en mémoire du tableau client.
+ * @param descripteurDesocketServeur
  */
-void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie)
+void triChoix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie, uint8_t* sortieClient, unsigned long tailleMemoire, int descripteurDeSocketServeur)
 {
     /* Exécute la commande ls et envoie le résultat au client. */
-    if (str_eq(choix, requeteLs))
+    if (strEq(choix, requeteLs))
     {
         system(requeteLs);
         FILE* fichier = fopen("resultat.txt", "r");
@@ -277,8 +399,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         }
         else
         {
-            printf("Erreur d'ouverture du fichier.\n");
-            syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
+            printfSyslog("Erreur d'ouverture du fichier", LOG_PERROR);
         }
         system("rm -f resultat.txt");
     }
@@ -286,7 +407,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
      * Il reçoit une chaîne du client, la concatène avec la chaîne "partage/" puis change le répertoire
      * de travail courant en la désirée.
      */
-    else if (str_eq(choix, requeteCd))
+    else if (strEq(choix, requeteCd))
     {
         char buffer[LONGUEUR_BUFFER];
         memset(buffer, 0, LONGUEUR_BUFFER);
@@ -301,8 +422,8 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         strcat(cdDossier, "partage/");
         strcat(cdDossier, buffer);
 
-        printf("Vous avez choisis le dossier : %s \n", buffer);
-        syslog(LOG_INFO, "Vous avez choisis le dossier : %s \n", buffer);
+        printf("Dossier choisi : %s \n", buffer);
+        syslog(LOG_INFO, "Dossier choisi : %s \n", buffer);
         chdir(cdDossier);
         free (cdDossier);
         send(
@@ -313,7 +434,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         );
     }
     /* Permet au client de télécharger un fichier depuis le serveur.*/
-    else if (str_eq(choix, requeteDl))
+    else if (strEq(choix, requeteDl))
     {
         char buffer[LONGUEUR_BUFFER];
         memset(buffer, 0, LONGUEUR_BUFFER);
@@ -328,8 +449,8 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         memset(dlFichier, 0, LONGUEUR_BUFFER);
         memset(nomFichier, 0, LONGUEUR_BUFFER);
         strcat(dlFichier, buffer);
-        printf ("Vous avez choisis le fichier : %s \n", dlFichier);
-        syslog(LOG_INFO, "Vous avez choisis le fichier : %s \n", dlFichier);
+        printf ("Fichier choisi : %s \n", dlFichier);
+        syslog(LOG_INFO, "Fichier choisi : %s \n", dlFichier);
         chdir("partage");
         DIR* dir = opendir(buffer);
         if (dir)
@@ -375,7 +496,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
 
                 strcat(dlFichier, nomFichier);
 
-                printf ("Fichier à envoyer : %s\n", dlFichier);
+                printf("Fichier à envoyer : %s\n", dlFichier);
                 syslog(LOG_INFO, "Fichier à envoyer : %s\n", dlFichier);
                 
                 FILE* fichierDl = fopen(dlFichier, "r");
@@ -410,8 +531,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
                 }
                 else
                 {
-                    printf("Erreur d'ouverture du fichier.\n");
-                    syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
+                    printfSyslog("Erreur d'ouverture du fichier", LOG_PERROR);
                     send(
                         client->descripteurDeSocketClient,
                         "Erreur d'ouverture du fichier",
@@ -422,8 +542,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
             }
             else
             {
-                printf("Erreur d'ouverture du fichier.\n");
-                syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
+                printfSyslog("Erreur d'ouverture du fichier", LOG_PERROR);
             }
             system("rm -f resultat.txt");
         }
@@ -438,7 +557,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         }
     }
     /* Reçoit un fichier du client et l'enregistre dans le système de fichiers du serveur. */
-    else if (str_eq(choix, requeteSend))
+    else if (strEq(choix, requeteSend))
     {
         char buffer[LONGUEUR_BUFFER];
         memset(buffer, 0, LONGUEUR_BUFFER);
@@ -454,8 +573,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         if (dir)
         {
             closedir(dir);
-            printf("Le dossier existe déjà.\n");
-            syslog(LOG_INFO, "Le dossier existe déjà.\n");
+            printfSyslog("Le dossier existe déjà.\n", LOG_INFO);
             chdir(nomDuFichier);
             system ("ls -C > resultat.txt");
             FILE* fichierLs = fopen("resultat.txt", "r");
@@ -485,17 +603,14 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
             }
             else
             {
-                printf("Erreur d'ouverture du fichier.\n");
-                syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
+                printfSyslog("Erreur d'ouverture du fichier", LOG_PERROR);
             }
         }
         else
         {
-            printf("Le dossier n'existe pas. Création en cours...\n");
-            syslog(LOG_INFO, "Le dossier n'existe pas. Création en cours...\n");
+            printfSyslog("Le dossier n'existe pas. Création en cours...\n", LOG_INFO);
             mkdir(nomDuFichier, 0777);
-            printf("Dossier créé.\n");
-            syslog(LOG_INFO, "Dossier créé.\n");
+            printfSyslog("Dossier créé.\n", LOG_INFO);
             chdir(nomDuFichier);
 
             strcat(nomDuFichier, "-v1");
@@ -511,8 +626,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
                 LONGUEUR_BUFFER,
                 0
             );
-            printf("Reception reussie.\n");
-            syslog(LOG_INFO, "Reception reussie.\n");
+            printfSyslog("Reception reussie.\n", LOG_INFO);
             send(
                 client->descripteurDeSocketClient,
                 "Reception reussie",
@@ -524,8 +638,7 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         }
         else
         {
-            printf ("Erreur d'ouverture du fichier.\n");
-            syslog(LOG_ERR, "Erreur d'ouverture du fichier.\n");
+            printfSyslog("Erreur d'ouverture du fichier", LOG_PERROR);
             send(
                 client->descripteurDeSocketClient,
                 "Erreur d'ouverture du fichier.",
@@ -536,12 +649,12 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
         chdir("..");
         chdir("..");
     }
-    else if (str_eq(choix, requeteExit))
+    else if (strEq(choix, requeteExit))
     {
         //*sortie = 0;
         
         // Fermeture de la connexion avec le client.
-        close(client->descripteurDeSocketClient);
+        close(client[indexClient].descripteurDeSocketClient);
         
         /* 
          * Définition du client à 0 dans le tableau, puis calcul de la taille du tableau client
@@ -550,32 +663,39 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
          * la mémoire du tableau client à la valeur calculer.
          */
         client[indexClient] = (Client){0};
-        size_t nvaleur = sizeof(client) - sizeof(Client);
+        for (uint8_t i = indexClient; i + 1 < tailleMemoire / sizeof(Client); i++)
+        {
+            client[i] = client[indexClient + 1];
+        }
+        
+        unsigned long nvaleur = tailleMemoire - sizeof(Client);
         if (nvaleur <= __PTRDIFF_MAX__)
         {
-            client = (Client*) realloc(client, nvaleur);
+            Client* clientTemp = (Client*) realloc(client, nvaleur);
 
-            if (!client)
+            if (!clientTemp)
             {
-                perror("Erreur d'allocation de mémoire.\n");
-                syslog(LOG_ERR, "Erreur d'allocation de mémoire.\n");
+                printfSyslog("Erreur d'allocation de mémoire.\n", LOG_PERROR);
                 client = NULL;
                 exit(-1);
             }
 
-            printf("Le client s'est bien deconnecté.\n");
-            syslog(LOG_INFO, "Le client s'est bien deconnecté.\n");
+            client = clientTemp;
+            clientTemp = NULL;
+
+            *sortieClient = 0;
+
+            printfSyslog("Le client s'est bien deconnecté.\n", LOG_INFO);
         }
         else
         {
-            perror("Erreur d'allocation de mémoire, l'espace demandé est trop grande.\n");
-            syslog(LOG_ERR, "Erreur d'allocation de mémoire, l'espace demandé est trop grande.\n");
+            printfSyslog("Erreur d'allocation de mémoire.\n", LOG_PERROR);
             free(client);
             client = NULL;
             exit(-1);
         }
     }
-    else if (str_eq(choix, requeteShutdown))
+    else if (strEq(choix, requeteShutdown))
     {
         *sortie = 0;
         send(
@@ -584,5 +704,14 @@ void tri_choix(Client* client, uint8_t indexClient, char* choix, uint8_t* sortie
             LONGUEUR_BUFFER,
             0
         );
+        /* Recalcul de la taille du tableau client. */
+        uint8_t taille = tailleMemoire / sizeof(Client);
+
+        /* Ferme le socket de chaque client. */
+        for (int i = 0; i < taille - 1; i++)
+            close(client[i].descripteurDeSocketClient);
+
+        if(shutdown(descripteurDeSocketServeur, SHUT_RD) < 0)
+            printfSyslog("Problème avec le shutdown", LOG_PERROR);
     }
 }

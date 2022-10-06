@@ -26,10 +26,14 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-#define LONGUEUR_BUFFER 1024         // Taille du buffer de lecture
-//#undef NULL                          // Pour éviter les erreurs de compilation
-//#define NULL (void*)0                // Valeur NULL
+/*
+ * À ne pas en prendre en compte dans les modifications.
+ * Décommenter uniquement pour éviter les bugs de l'éditeur de texte.
+ */
+#undef NULL                          // Pour éviter les erreurs de compilation
+#define NULL (void*)0                // Valeur NULL
 
+#define LONGUEUR_BUFFER 1024         // Taille du buffer de lecture
 #define ipMachine "127.0.0.1"        // Définition de l'ip du serveur avec la valeur 127.0.0.1.
 #define PORT 2000                    // Il définit le numéro de port à 2000.
 #define requeteConnectee "connectee" // Il définit la requête à envoyer au serveur.
