@@ -10,6 +10,7 @@ Ce qui fonctionne :
 - Le listage des fichiers.
 - La possibilité de changé de répertoire.
 - La commande pour stopper le serveur.
+- Les requetes à plusieurs clients.
 
 Il est possble que les commandes ne marchent pas ensemble.
 
