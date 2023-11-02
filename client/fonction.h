@@ -13,7 +13,7 @@
 #ifndef FONCTION_H
 #define FONCTION_H
 
-#include "../global.h"
+#include "global.h"
 
 // -lpthread
 // -D_REENTRANT

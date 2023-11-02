@@ -1,9 +1,9 @@
 /**
- * @file main.c
+ * @file serveur.c
  * @author Lilian CHARDON, Andréas Castello (lilian.chardon@ynov.com, andreas.castello@ynov.com)
  * @brief Gestionnaire de transfert de fichier et de stockage en TCP/IP
  * @version 0.1
- * @date 10/04/2022
+ * @date 19-10-2023
  * 
  * @copyright Copyright (c) 2022
  * 
@@ -13,60 +13,50 @@
 /****************************/
 /* Socket serveur itérative */
 /****************************/
-#include "fonction.h"
+
+#include "reseau.h"
+#include "baseFonction.h"
+#include "gestionClient.h"
 
 
 int main(int argc, char** argv)
 {
+    /**
+     * This function initializes the syslog logging facility with the given parameters.
+     * The first parameter is the name of the program, the second parameter specifies that 
+     * the process ID should be included in each log message, and the third parameter specifies 
+     * that log messages should be written to the system console.
+     */
     openlog("serveur", LOG_PID | LOG_CONS, LOG_LOCAL0);
 
 
     /* Etape 1 */
     /***********/
     
-    struct sockaddr_in addr;
-    /* Création de la socket */
-    if (configAddr(&addr) == -1)
+    /*
+     * Creates a socket and configures its address.
+     * 
+     * @param addr A pointer to a sockaddr_in struct to be configured.
+     * @return Returns -1 if there was an error configuring the address, otherwise returns 0.
+     */
+    struct sockaddr_in addr[NB_CLIENT_MAX] = {0};
+    if (configAddr(addr) == -1)
     {
         printfSyslog("Erreur de configuration de l'adresse", LOG_PERROR);
         return -1;
     }
 
+    int descripteurDeSocketServeur[NB_CLIENT_MAX] = {0};
 
-    /* Etape 2 */
-    /***********/
-    int descripteurDeSocketServeur = socket(PF_INET, SOCK_STREAM, 0);
-    if (descripteurDeSocketServeur < 0)
+    /* Etape 2, 3 & 4 */
+    /******************/
+    if (configSocket(descripteurDeSocketServeur, addr) == -1)
     {
-        printfSyslog("Problèmes pour créer la socket", LOG_PERROR);
         return -1;
-    }
-    printfSyslog("Socket créé.\n", LOG_INFO);
-
-    /* Etape 3 */
-    /***********/
-    if (bind(descripteurDeSocketServeur,(struct sockaddr *)&addr,sizeof(struct sockaddr_in)) < 0)
-    {
-        printfSyslog("Problèmes pour faire le bind", LOG_PERROR);
-        return -1;
-    }
-    printfSyslog("Socket liée\n", LOG_INFO);
-
-    /* Etape 4 */
-    /***********/
-    if (listen(descripteurDeSocketServeur, 1) < 0)
-    {
-        printfSyslog("Problèmes pour faire l'écoute", LOG_PERROR);
-        return -1;
-    }
+    }    
 
     /* Etape 5 */
     /***********/
-    // uint8_t taille      = 1; // taille du tableau client
-    // uint8_t indexClient = 0; // index du client
-    uint8_t sortie      = 1; // sortie du programme
-    
-
     char buffer[LONGUEUR_BUFFER]; // tableau de buffer qui va être utilisé pour stocker les buffers des clients
     memset(buffer, 0, LONGUEUR_BUFFER); // on initialise le tableau de buffer à 0
 
@@ -74,9 +64,10 @@ int main(int argc, char** argv)
         .client = NULL,
         .descripteurDeSocketServeur = descripteurDeSocketServeur,
         .indexClient = 0,
-        .taille = 0,
-        .sortie = &sortie,
-        .sortieClient = NULL
+        .nbClient = 0,
+        .sortie = NULL,
+        .sortieClient = NULL,
+        .adresseDuServeur = addr
     }; // structure qui va être utilisée comme argument pour lancer le thread client
 
     pthread_t threadConnexion; // thread qui va être créé pour la réception des connexions
@@ -93,7 +84,7 @@ int main(int argc, char** argv)
     /***********/
     verifJoinThread(&threadConnexion, 0);
 
-    close(descripteurDeSocketServeur);
+    close(*descripteurDeSocketServeur);
     closelog();
 
     pthread_exit(NULL);
