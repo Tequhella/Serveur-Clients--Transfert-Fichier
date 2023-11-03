@@ -29,6 +29,8 @@ $(B_DIR)gestionClient.o: $(S_DIR)gestionClient.c $(H_DIR)/gestionClient.h
 $(B_DIR)triChoix.o: $(S_DIR)triChoix.c $(H_DIR)/triChoix.h
 	$(GCC) $(CFLAGS) -c $(S_DIR)triChoix.c -o $(B_DIR)triChoix.o $(LBUILD)
 
+dep:
+	sudo apt install libexplain-dev
 
 clean:
 	rm -f serveur $(B_DIR)*.o
