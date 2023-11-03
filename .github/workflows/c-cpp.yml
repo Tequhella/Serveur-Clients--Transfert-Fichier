@@ -13,11 +13,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: cleanS
+    - name: libexplain_S
+      run: make dep -C serveur/
+    - name: clean_S
       run: make clean -C serveur/
-    - name: makeS
+    - name: make_S
       run: make -C serveur/
-    - name: cleanC
+    - name: libexplain_C
+      run: make dep -C client/
+    - name: clean_C
       run: make clean -C client/
-    - name: makeC
+    - name: make_C
       run: make -C client/
